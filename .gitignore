@@ -4,3 +4,6 @@ apps/*/dist/
 apps/*/.env
 apps/api/storage/
 *.log
+tools/print-agent/packages/
+tools/print-agent/release-assets/
+tools/print-relay/spool/
