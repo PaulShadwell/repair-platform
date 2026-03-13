@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: repair-platform
+  namespace: repair-platform
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: repair-platform.techvee.cloud
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: repair-platform-api
+                port:
+                  number: 4000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: repair-platform-web
+                port:
+                  number: 80

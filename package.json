@@ -1,0 +1,30 @@
+{
+  "name": "repair-platform",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run --workspaces --if-present build",
+    "lint": "npm run --workspaces --if-present lint",
+    "build:print-agent-packages": "node tools/print-agent/build-packages.mjs",
+    "build:print-agent-release": "node tools/print-agent/build-packages.mjs --zip",
+    "release:print-agent": "node tools/print-agent/publish-release.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  }
+}

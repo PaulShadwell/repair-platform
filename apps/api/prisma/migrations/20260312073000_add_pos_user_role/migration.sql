@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "RoleKey" ADD VALUE IF NOT EXISTS 'POS_USER';

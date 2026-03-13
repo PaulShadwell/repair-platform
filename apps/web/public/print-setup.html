@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>POS Label Print Setup</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f7f9fc;
+        color: #1d2733;
+      }
+      .page {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 24px 16px 48px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.8rem;
+      }
+      .lead {
+        margin: 0 0 20px;
+        color: #4a5b70;
+      }
+      .lang-switch {
+        display: inline-flex;
+        gap: 0.6rem;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+      }
+      .lang-switch a {
+        color: #235db6;
+        text-decoration: none;
+      }
+      .lang-switch .active {
+        font-weight: 700;
+        color: #1d2733;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #dde6f0;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.05rem;
+      }
+      ol,
+      ul {
+        margin: 8px 0 0 20px;
+        padding: 0;
+      }
+      li {
+        margin-bottom: 7px;
+      }
+      pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 8px;
+        padding: 10px 12px;
+        overflow: auto;
+        font-size: 0.88rem;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .note {
+        background: #eef5ff;
+        border-left: 4px solid #2d6cdf;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <nav class="lang-switch" aria-label="Language switch">
+        <span class="active">English</span>
+        <a href="/print-setup-de.html">Deutsch</a>
+      </nav>
+      <h1>POS Label Print Setup (macOS / Windows / Linux)</h1>
+      <p class="lead">
+        Follow these steps on each POS computer to print labels through the cloud API using the local printer.
+      </p>
+
+      <section class="card">
+        <h2>Before you start</h2>
+        <ul>
+          <li>The POS printer is connected and visible in your operating system as a printer.</li>
+          <li>You can print a test page from the OS printer settings.</li>
+          <li>Node.js is installed on the POS computer.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Install Node.js (required)</h2>
+        <p>Install Node.js LTS (version 20 or newer recommended) before pairing the print agent.</p>
+        <ul>
+          <li>
+            <strong>macOS:</strong> Download from
+            <a href="https://nodejs.org/en/download" target="_blank" rel="noreferrer">nodejs.org</a>
+            and run the installer package.
+          </li>
+          <li>
+            <strong>Windows:</strong> Download the Windows installer from
+            <a href="https://nodejs.org/en/download" target="_blank" rel="noreferrer">nodejs.org</a>
+            and install for all users.
+          </li>
+          <li>
+            <strong>Linux:</strong> Install from your package manager or NodeSource (LTS recommended).
+          </li>
+        </ul>
+        <pre><code># verify installation
+node -v
+npm -v</code></pre>
+      </section>
+
+      <section class="card">
+        <h2>Download the print agent package</h2>
+        <p>
+          Download the latest OS package from GitHub Releases:
+          <a
+            href="https://github.com/paulshadwell/repair-platform/releases/latest"
+            target="_blank"
+            rel="noreferrer"
+            >repair-platform releases</a
+          >
+        </p>
+        <ul>
+          <li><code>repair-print-agent-macos.zip</code></li>
+          <li><code>repair-print-agent-windows.zip</code></li>
+          <li><code>repair-print-agent-linux.zip</code></li>
+        </ul>
+        <p>Extract the ZIP and open a terminal in the extracted folder.</p>
+      </section>
+
+      <section class="card">
+        <h2>1) Select the printer profile in Repair Platform</h2>
+        <ol>
+          <li>Open <strong>Settings</strong> in the app.</li>
+          <li>Select the correct <strong>Printer Profile</strong> for this POS device.</li>
+          <li>Click <strong>Generate pairing code</strong>.</li>
+          <li>Keep the code open (valid for 10 minutes).</li>
+        </ol>
+      </section>
+
+      <section class="card">
+        <h2>2) Pair the local print agent (one-time)</h2>
+        <p><strong>macOS / Linux:</strong></p>
+        <pre><code># inside the extracted print-agent folder
+node agent.mjs pair \
+  --api "https://repair-platform.techvee.cloud" \
+  --code "&lt;PAIRING_CODE&gt;" \
+  --name "POS-Laptop-1" \
+  --printer "Label_TD80"</code></pre>
+        <p><strong>Windows (PowerShell):</strong></p>
+        <pre><code># inside the extracted print-agent folder
+node agent.mjs pair `
+  --api "https://repair-platform.techvee.cloud" `
+  --code "&lt;PAIRING_CODE&gt;" `
+  --name "POS-Laptop-1" `
+  --printer "Label_TD80"</code></pre>
+        <p>
+          Replace <code>&lt;PAIRING_CODE&gt;</code>, <code>POS-Laptop-1</code>, and <code>Label_TD80</code> with your values.
+        </p>
+        <p class="note">
+          Windows note: use a shared printer name (for example <code>Label_TD80</code>) or a full share path
+          <code>\\host\printer</code>.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>3) Run the print agent</h2>
+        <p><strong>macOS / Linux:</strong></p>
+        <pre><code>node agent.mjs run</code></pre>
+        <p><strong>Windows (PowerShell):</strong></p>
+        <pre><code>.\run-agent.ps1</code></pre>
+        <p>The agent polls the cloud API and prints locally through the POS computer.</p>
+      </section>
+
+      <section class="card">
+        <h2>4) Auto-start at login (recommended)</h2>
+        <p><strong>macOS (launchd):</strong></p>
+        <pre><code>chmod +x install-launchd.sh uninstall-launchd.sh
+./install-launchd.sh</code></pre>
+
+        <p><strong>Windows (Task Scheduler):</strong></p>
+        <pre><code>.\install-startup-task.ps1</code></pre>
+
+        <p><strong>Linux (systemd user service):</strong></p>
+        <pre><code>chmod +x install-systemd-user.sh uninstall-systemd-user.sh
+./install-systemd-user.sh</code></pre>
+      </section>
+
+      <section class="card note">
+        <h2>Check / troubleshooting</h2>
+        <ul>
+          <li>In app Settings, printer status should show <strong>Online</strong>.</li>
+          <li>If it shows Offline, run <code>node agent.mjs run</code> again and check printer name.</li>
+          <li>Make sure the selected app profile matches the paired POS computer profile.</li>
+          <li>On Windows/Linux, make sure your local print command/driver is working from the OS first.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

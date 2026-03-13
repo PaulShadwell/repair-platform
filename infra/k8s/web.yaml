@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: repair-platform-web
+  namespace: repair-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: repair-platform-web
+  template:
+    metadata:
+      labels:
+        app: repair-platform-web
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: web
+          image: ghcr.io/paulshadwell/repair-platform/web:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: repair-platform-web
+  namespace: repair-platform
+spec:
+  selector:
+    app: repair-platform-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

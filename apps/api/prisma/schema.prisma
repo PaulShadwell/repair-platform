@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleKey {
+  ADMIN
+  POS_USER
+  REPAIRER
+  SUPERVISOR
+}
+
+enum RepairStatus {
+  NEW
+  IN_PROGRESS
+  WAITING_PARTS
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+}
+
+enum RepairOutcome {
+  YES
+  PARTIAL
+  NO
+}
+
+enum ConnectionType {
+  SPOOL
+  TCP
+}
+
+enum PrintJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id               String                     @id @default(uuid())
+  username         String                     @unique
+  fullName         String
+  passwordHash     String
+  profileImageKey  String?
+  profilePhone     String?
+  profileLocation  String?
+  aboutMe          String?
+  isActive         Boolean                    @default(true)
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  roles            UserRole[]
+  assignedRepairs  Repair[]                   @relation("RepairAssignedTo")
+  updatedRepairs   Repair[]                   @relation("RepairUpdatedBy")
+  statusChanges    RepairStatusHistory[]
+  assignmentEvents RepairAssignmentHistory[]  @relation("AssignmentChangedBy")
+  printLogs        PrintLog[]
+  pairingCodes     PrinterPairingCode[]
+}
+
+model Role {
+  id        String    @id @default(uuid())
+  key       RoleKey   @unique
+  createdAt DateTime  @default(now())
+  users     UserRole[]
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, roleId])
+}
+
+model Repair {
+  id                  String                    @id @default(uuid())
+  legacyId            Int?
+  publicRef           String                    @unique
+  repairNumber        Int?
+  productType         String?
+  createdDate         DateTime?
+  firstName           String?
+  lastName            String?
+  email               String?
+  phone               String?
+  postcode            String?
+  city                String?
+  source              String?
+  itemName            String?
+  problemDescription  String?
+  technicianNotes     String?
+  fixDescription      String?
+  material            String?
+  successful          Boolean?
+  outcome             RepairOutcome?
+  safetyTested        Boolean?
+  notified            Boolean?
+  returned            Boolean?
+  status              RepairStatus              @default(NEW)
+  assignedToUserId    String?
+  updatedByUserId     String?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  completedAt         DateTime?
+  assignedToUser      User?                     @relation("RepairAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  updatedByUser       User?                     @relation("RepairUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  photos              RepairPhoto[]
+  statusHistory       RepairStatusHistory[]
+  assignmentHistory   RepairAssignmentHistory[]
+  printLogs           PrintLog[]
+  printJobs           PrintJob[]
+
+  @@index([assignedToUserId])
+  @@index([status])
+  @@index([createdDate])
+}
+
+model RepairPhoto {
+  id               String   @id @default(uuid())
+  repairId         String
+  storageKey       String   @unique
+  originalFileName String
+  mimeType         String
+  checksum         String?
+  createdByUserId  String?
+  capturedAt       DateTime @default(now())
+  repair           Repair   @relation(fields: [repairId], references: [id], onDelete: Cascade)
+
+  @@index([repairId])
+}
+
+model RepairStatusHistory {
+  id          String       @id @default(uuid())
+  repairId    String
+  fromStatus  RepairStatus?
+  toStatus    RepairStatus
+  notes       String?
+  changedById String?
+  createdAt   DateTime     @default(now())
+  repair      Repair       @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  changedBy   User?        @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([repairId, createdAt])
+}
+
+model RepairAssignmentHistory {
+  id           String   @id @default(uuid())
+  repairId     String
+  fromUserId   String?
+  toUserId     String?
+  changedById  String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  repair       Repair   @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  changedBy    User?    @relation("AssignmentChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([repairId, createdAt])
+}
+
+model PrinterProfile {
+  id             String         @id @default(uuid())
+  name           String         @unique
+  connectionType ConnectionType @default(SPOOL)
+  host           String?
+  port           Int?
+  codePage       String         @default("cp437")
+  charsPerLine   Int            @default(42)
+  cutAfterPrint  Boolean        @default(true)
+  feedLines      Int            @default(4)
+  createdAt      DateTime       @default(now())
+  printLogs      PrintLog[]
+  printAgents    PrintAgent[]
+  printJobs      PrintJob[]
+  pairingCodes   PrinterPairingCode[]
+}
+
+model PrintLog {
+  id               String          @id @default(uuid())
+  repairId         String
+  printerProfileId String?
+  printedById      String?
+  payloadBytes     Int
+  success          Boolean         @default(true)
+  errorMessage     String?
+  createdAt        DateTime        @default(now())
+  repair           Repair          @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  printerProfile   PrinterProfile? @relation(fields: [printerProfileId], references: [id], onDelete: SetNull)
+  printedBy        User?           @relation(fields: [printedById], references: [id], onDelete: SetNull)
+}
+
+model PrintAgent {
+  id               String         @id @default(uuid())
+  name             String
+  token            String         @unique
+  printerProfileId String
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  lastSeenAt       DateTime?
+  printerProfile   PrinterProfile @relation(fields: [printerProfileId], references: [id], onDelete: Cascade)
+  jobs             PrintJob[]
+
+  @@index([printerProfileId, isActive])
+}
+
+model PrintJob {
+  id               String          @id @default(uuid())
+  repairId         String
+  printerProfileId String
+  payload          Bytes
+  status           PrintJobStatus  @default(PENDING)
+  errorMessage     String?
+  claimedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  agentId          String?
+  repair           Repair          @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  printerProfile   PrinterProfile  @relation(fields: [printerProfileId], references: [id], onDelete: Cascade)
+  agent            PrintAgent?     @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([printerProfileId, status, createdAt])
+}
+
+model PrinterPairingCode {
+  id               String         @id @default(uuid())
+  code             String         @unique
+  printerProfileId String
+  expiresAt        DateTime
+  usedAt           DateTime?
+  createdById      String?
+  createdAt        DateTime       @default(now())
+  printerProfile   PrinterProfile @relation(fields: [printerProfileId], references: [id], onDelete: Cascade)
+  createdBy        User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([printerProfileId, expiresAt])
+}
