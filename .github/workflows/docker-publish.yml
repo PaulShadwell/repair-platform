@@ -16,8 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REGISTRY: ghcr.io
-      IMAGE_API: ghcr.io/${{ github.repository }}/api
-      IMAGE_WEB: ghcr.io/${{ github.repository }}/web
     steps:
       - uses: actions/checkout@v4
 
@@ -38,6 +36,15 @@ jobs:
           echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
           echo "Tags: latest, $SHORT_SHA, ${{ github.sha }}"
 
+      # github.repository can include uppercase (e.g. owner name); Docker tags must be lowercase.
+      - name: GHCR image paths (lowercase)
+        id: registry
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "image_api=ghcr.io/${REPO_LOWER}/api" >> "$GITHUB_OUTPUT"
+          echo "image_web=ghcr.io/${REPO_LOWER}/web" >> "$GITHUB_OUTPUT"
+          echo "Built paths: ghcr.io/${REPO_LOWER}/api|web"
+
       - name: Build and push API
         uses: docker/build-push-action@v6
         with:
@@ -45,9 +52,9 @@ jobs:
           file: Dockerfile.api
           push: true
           tags: |
-            ${{ env.IMAGE_API }}:latest
-            ${{ env.IMAGE_API }}:${{ steps.meta.outputs.short_sha }}
-            ${{ env.IMAGE_API }}:${{ github.sha }}
+            ${{ steps.registry.outputs.image_api }}:latest
+            ${{ steps.registry.outputs.image_api }}:${{ steps.meta.outputs.short_sha }}
+            ${{ steps.registry.outputs.image_api }}:${{ github.sha }}
 
       - name: Build and push Web
         uses: docker/build-push-action@v6
@@ -58,6 +65,6 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=/api
           tags: |
-            ${{ env.IMAGE_WEB }}:latest
-            ${{ env.IMAGE_WEB }}:${{ steps.meta.outputs.short_sha }}
-            ${{ env.IMAGE_WEB }}:${{ github.sha }}
+            ${{ steps.registry.outputs.image_web }}:latest
+            ${{ steps.registry.outputs.image_web }}:${{ steps.meta.outputs.short_sha }}
+            ${{ steps.registry.outputs.image_web }}:${{ github.sha }}
