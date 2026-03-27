@@ -14,7 +14,7 @@
 }
 
 .login-card {
-  width: min(460px, 100%);
+  width: min(760px, 100%);
   border: 1px solid #cdd8e5;
   box-shadow: 0 16px 36px rgba(35, 53, 77, 0.12);
   padding: 1.25rem;
@@ -23,6 +23,13 @@
 .login-card-header h1 {
   margin: 0 0 0.25rem;
   font-size: 1.9rem;
+}
+
+.login-brand-logo {
+  display: block;
+  width: min(100%, 660px);
+  height: auto;
+  margin: 0 auto 0.7rem;
 }
 
 .login-card-header p {
@@ -73,6 +80,23 @@
   background: #244f7d;
 }
 
+.login-link-button {
+  margin-top: 0.6rem;
+  border: none;
+  background: transparent;
+  color: #235db6;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.forgot-password-panel {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #dde6f0;
+}
+
 .login-message {
   margin-top: 0.75rem;
   color: #c53030;
@@ -91,6 +115,25 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
+}
+
+.header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.header-brand-logo {
+  width: 150px;
+  max-width: 42vw;
+  height: auto;
+  border-radius: 8px;
+  object-fit: contain;
+  display: block;
+}
+
+.header-brand h1 {
+  margin: 0;
 }
 
 .header-user-block {
@@ -245,6 +288,12 @@
   gap: 0.35rem;
 }
 
+.header-actions button.active {
+  background: #2a5d93;
+  color: #fff;
+  border-color: #2a5d93;
+}
+
 .grid {
   display: grid;
   grid-template-columns: minmax(360px, var(--left-pane-width, 460px)) 8px minmax(0, 1fr);
@@ -299,6 +348,51 @@
 
 .add-repair-submit {
   margin-top: 0.35rem;
+}
+
+.add-repair-section {
+  margin-bottom: 1.1rem;
+}
+
+.add-repair-section-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e3a5c;
+}
+
+.add-repair-history {
+  margin-top: 0.65rem;
+}
+
+.add-repair-clear-link {
+  grid-column: 1 / -1;
+}
+
+.clear-linked-customer-btn {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.88rem;
+  border: 1px solid #b8c5d4;
+  border-radius: 6px;
+  background: #f4f7fb;
+  color: #1e3a5c;
+  cursor: pointer;
+}
+
+.clear-linked-customer-btn:hover {
+  background: #e8eef6;
+  border-color: #9eb2c8;
+}
+
+.intake-subsection-title {
+  margin: 0.75rem 0 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1e3a5c;
+}
+
+.intake-subsection-title:first-child {
+  margin-top: 0;
 }
 
 .add-user-grid {
@@ -477,6 +571,27 @@
   gap: 1rem;
 }
 
+.function-hub-card h2 {
+  margin-bottom: 0.35rem;
+}
+
+.function-hub-card {
+  max-width: 920px;
+}
+
+.function-hub-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.function-hub-actions button {
+  min-width: 170px;
+  min-height: 44px;
+  font-weight: 600;
+}
+
 .chart-card {
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -599,6 +714,26 @@
   margin-right: 0.4rem;
 }
 
+.notified-toggle-cell {
+  text-align: center !important;
+  width: 120px;
+}
+
+.notified-toggle-cell input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.manage-user-action-button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .status-chip {
   display: inline-flex;
   align-items: center;
@@ -637,6 +772,14 @@
   background: #ffecec;
   border-color: #f1bcbc;
   color: #912e2e;
+}
+
+.active-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0.45rem 0 0.6rem;
 }
 
 .role-pill-list {
@@ -691,6 +834,53 @@
   border-radius: 999px;
   padding: 0.3rem 0.65rem;
   font-size: 0.82rem;
+}
+
+.customer-history-list,
+.repair-history-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.customer-history-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.customer-history-row {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #d7e2ef;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.customer-history-row:hover {
+  background: #f0f6fc;
+  border-color: #b8cfe8;
+}
+
+.customer-history-name {
+  font-weight: 600;
+}
+
+.customer-history-meta {
+  font-size: 0.88rem;
+  color: #4a5568;
+}
+
+.repair-history-list li {
+  border-bottom: 1px dashed #d8e1ec;
+  padding-bottom: 0.35rem;
 }
 
 .detail-section {

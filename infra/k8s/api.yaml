@@ -6,6 +6,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  # If PVC stays Pending: kubectl get storageclass — then set storageClassName below.
+  # storageClassName: default
   resources:
     requests:
       storage: 5Gi
@@ -75,6 +77,13 @@ spec:
               port: 4000
             initialDelaySeconds: 30
             periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
       volumes:
         - name: api-data
           persistentVolumeClaim:

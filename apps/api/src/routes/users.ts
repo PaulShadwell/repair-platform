@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import prismaClientPackage from "@prisma/client";
+import prismaClientPackage, { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -13,6 +13,7 @@ export const usersRouter = Router();
 const createUserSchema = z.object({
   username: z.string().min(3),
   fullName: z.string().min(2),
+  recoveryEmail: z.string().email().max(200).nullable().optional(),
   password: z.string().min(8),
   role: z.nativeEnum(RoleKey).default("REPAIRER"),
 });
@@ -25,6 +26,15 @@ const resetPasswordSchema = z.object({
 const setRolesSchema = z.object({
   roles: z.array(z.nativeEnum(RoleKey)).min(1),
 });
+
+function isMissingForcePasswordChangeColumn(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2022" &&
+    typeof error.message === "string" &&
+    error.message.includes("forcePasswordChange")
+  );
+}
 
 usersRouter.get("/", requireAuth, async (req: AuthenticatedRequest, res) => {
   if (!req.user || !hasPermission(req.user.roles, "repairs:assign")) {
@@ -53,20 +63,31 @@ usersRouter.post("/", requireAuth, async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  const existing = await prisma.user.findUnique({ where: { username: parsed.data.username } });
+  const existing = await prisma.user.findUnique({
+    where: { username: parsed.data.username },
+    select: { id: true },
+  });
   if (existing) {
     res.status(409).json({ message: "Username already exists" });
     return;
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-  const user = await prisma.user.create({
-    data: {
-      username: parsed.data.username,
-      fullName: parsed.data.fullName,
-      passwordHash,
-    },
-  });
+  const createData: {
+    username: string;
+    fullName: string;
+    passwordHash: string;
+    recoveryEmail?: string | null;
+  } = {
+    username: parsed.data.username,
+    fullName: parsed.data.fullName,
+    passwordHash,
+  };
+  if (parsed.data.recoveryEmail !== undefined) {
+    createData.recoveryEmail = parsed.data.recoveryEmail;
+  }
+
+  const user = await prisma.user.create({ data: createData });
 
   const role = await prisma.role.upsert({
     where: { key: parsed.data.role },
@@ -98,7 +119,14 @@ usersRouter.get("/repairers", requireAuth, async (req: AuthenticatedRequest, res
   }
 
   const users = await prisma.user.findMany({
-    include: { roles: { include: { role: true } } },
+    select: {
+      id: true,
+      username: true,
+      fullName: true,
+      recoveryEmail: true,
+      isActive: true,
+      roles: { select: { role: { select: { key: true } } } },
+    },
     orderBy: { fullName: "asc" },
   });
 
@@ -107,6 +135,7 @@ usersRouter.get("/repairers", requireAuth, async (req: AuthenticatedRequest, res
       id: u.id,
       username: u.username,
       fullName: u.fullName,
+      recoveryEmail: u.recoveryEmail,
       isActive: u.isActive,
       roles: u.roles.map((r) => r.role.key),
     })),
@@ -154,11 +183,23 @@ usersRouter.post("/:id/reset-password", requireAuth, async (req: AuthenticatedRe
 
   const userId = String(req.params.id);
   const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
-  const user = await prisma.user.update({
-    where: { id: userId },
-    data: { passwordHash },
-    select: { id: true, username: true, fullName: true },
-  });
+  let user: { id: string; username: string; fullName: string };
+  try {
+    user = await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, forcePasswordChange: true },
+      select: { id: true, username: true, fullName: true },
+    });
+  } catch (error) {
+    if (!isMissingForcePasswordChangeColumn(error)) {
+      throw error;
+    }
+    user = await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+      select: { id: true, username: true, fullName: true },
+    });
+  }
 
   res.json({ user, message: "Password reset successful" });
 });
@@ -178,7 +219,13 @@ usersRouter.patch("/:id/roles", requireAuth, async (req: AuthenticatedRequest, r
   const userId = String(req.params.id);
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { roles: { include: { role: true } } },
+    select: {
+      id: true,
+      username: true,
+      fullName: true,
+      isActive: true,
+      roles: { select: { role: { select: { key: true } } } },
+    },
   });
   if (!user) {
     res.status(404).json({ message: "User not found" });
@@ -228,7 +275,13 @@ usersRouter.patch("/:id/roles", requireAuth, async (req: AuthenticatedRequest, r
 
   const updated = await prisma.user.findUnique({
     where: { id: userId },
-    include: { roles: { include: { role: true } } },
+    select: {
+      id: true,
+      username: true,
+      fullName: true,
+      isActive: true,
+      roles: { select: { role: { select: { key: true } } } },
+    },
   });
 
   res.json({

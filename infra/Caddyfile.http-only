@@ -1,0 +1,5 @@
+# Use this for testing without a domain (HTTP only on port 80).
+# In docker-compose.prod.yml, mount this file as /etc/caddy/Caddyfile instead of Caddyfile.
+:80 {
+	reverse_proxy web:80
+}

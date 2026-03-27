@@ -46,6 +46,8 @@ model User {
   username         String                     @unique
   fullName         String
   passwordHash     String
+  forcePasswordChange Boolean                 @default(false)
+  recoveryEmail    String?                    @unique
   profileImageKey  String?
   profilePhone     String?
   profileLocation  String?
@@ -58,8 +60,10 @@ model User {
   updatedRepairs   Repair[]                   @relation("RepairUpdatedBy")
   statusChanges    RepairStatusHistory[]
   assignmentEvents RepairAssignmentHistory[]  @relation("AssignmentChangedBy")
+  repairChanges    RepairChangeHistory[]
   printLogs        PrintLog[]
   pairingCodes     PrinterPairingCode[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Role {
@@ -80,6 +84,20 @@ model UserRole {
   @@unique([userId, roleId])
 }
 
+model Customer {
+  id             String   @id @default(uuid())
+  firstName      String?
+  lastName       String?
+  email          String?
+  phone          String?
+  streetAddress  String?
+  city           String?
+  postcode       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  repairs   Repair[]
+}
+
 model Repair {
   id                  String                    @id @default(uuid())
   legacyId            Int?
@@ -91,6 +109,7 @@ model Repair {
   lastName            String?
   email               String?
   phone               String?
+  streetAddress       String?
   postcode            String?
   city                String?
   source              String?
@@ -112,15 +131,34 @@ model Repair {
   completedAt         DateTime?
   assignedToUser      User?                     @relation("RepairAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   updatedByUser       User?                     @relation("RepairUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  customerId          String?
+  customer            Customer?                 @relation(fields: [customerId], references: [id], onDelete: SetNull)
   photos              RepairPhoto[]
   statusHistory       RepairStatusHistory[]
   assignmentHistory   RepairAssignmentHistory[]
+  changeHistory       RepairChangeHistory[]
   printLogs           PrintLog[]
   printJobs           PrintJob[]
 
   @@index([assignedToUserId])
+  @@index([customerId])
   @@index([status])
   @@index([createdDate])
+}
+
+model RepairChangeHistory {
+  id            String   @id @default(uuid())
+  repairId      String
+  changedById   String?
+  changeType    String
+  changedFields String[]
+  previousData  Json?
+  nextData      Json?
+  createdAt     DateTime @default(now())
+  repair        Repair   @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  changedBy     User?    @relation(fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([repairId, createdAt])
 }
 
 model RepairPhoto {
@@ -241,4 +279,17 @@ model PrinterPairingCode {
   createdBy        User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([printerProfileId, expiresAt])
+}
+
+model PasswordResetToken {
+  id            String   @id @default(uuid())
+  userId        String
+  tokenHash     String   @unique
+  expiresAt     DateTime
+  usedAt        DateTime?
+  requestedByIp String?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }

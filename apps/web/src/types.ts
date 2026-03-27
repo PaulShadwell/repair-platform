@@ -3,12 +3,14 @@ export type User = {
   username: string;
   fullName: string;
   roles: UserRoleKey[];
+  mustChangePassword?: boolean;
 };
 
 export type UserProfile = {
   id: string;
   username: string;
   fullName: string;
+  recoveryEmail: string | null;
   profilePhone: string | null;
   profileLocation: string | null;
   aboutMe: string | null;
@@ -22,11 +24,13 @@ export type Repair = {
   id: string;
   publicRef: string;
   repairNumber: number | null;
+  customerId?: string | null;
   productType: string | null;
   firstName: string | null;
   lastName: string | null;
   email: string | null;
   phone: string | null;
+  streetAddress: string | null;
   city: string | null;
   itemName: string | null;
   problemDescription: string | null;
@@ -47,6 +51,16 @@ export type Repair = {
     id: string;
     originalFileName: string;
   }>;
+};
+
+export type RepairChangeHistoryEntry = {
+  id: string;
+  changeType: string;
+  changedFields: string[];
+  previousData: Record<string, unknown> | null;
+  nextData: Record<string, unknown> | null;
+  createdAt: string;
+  changedBy?: { id: string; fullName: string; username: string } | null;
 };
 
 export type Assignee = {
@@ -86,6 +100,7 @@ export type RepairerAdmin = {
   id: string;
   username: string;
   fullName: string;
+  recoveryEmail: string | null;
   isActive: boolean;
   roles: UserRoleKey[];
 };

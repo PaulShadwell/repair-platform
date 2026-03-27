@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Languages, Search, LogOut, Printer, Plus, Trash2, ArrowLeft, Menu, X, UserCircle, Pencil, Eye, EyeOff } from "lucide-react";
+import { Languages, Search, LogOut, Printer, Plus, Trash2, ArrowLeft, Menu, X, UserCircle, Pencil, Eye, EyeOff, Home, FileDown, FileText, Save, Power, KeyRound } from "lucide-react";
 import "./App.css";
 import { api, setApiToken, setUnauthorizedHandler } from "./api";
 import type {
@@ -8,6 +8,7 @@ import type {
   DashboardMetrics,
   PrinterProfile,
   Repair,
+  RepairChangeHistoryEntry,
   RepairerAdmin,
   RepairsPagination,
   RepairsSort,
@@ -26,6 +27,16 @@ const ARTICLE_TYPE_OPTIONS = [
   "Wood",
   "Other",
 ] as const;
+const APP_LOGO_SRC = "/repair-kafi-logo-v3.png";
+
+function dateInputTodayLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 type BusyAction =
   | "createRepair"
   | "createUser"
@@ -36,7 +47,8 @@ type BusyAction =
   | "deleteRepair"
   | "generatePairCode"
   | "saveProfile"
-  | "changePassword";
+  | "changePassword"
+  | "exportCsv";
 
 function App() {
   const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "settings">(
@@ -57,9 +69,19 @@ function App() {
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const [token, setToken] = useState<string | null>(localStorage.getItem("rp_token"));
   const [user, setUser] = useState<User | null>(null);
+  const [showFunctionHub, setShowFunctionHub] = useState<boolean>(false);
+  const [showForgotPassword, setShowForgotPassword] = useState<boolean>(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<"request" | "reset">("request");
+  const [forgotPasswordForm, setForgotPasswordForm] = useState({
+    username: "",
+    resetToken: "",
+    newPassword: "",
+    confirmNewPassword: "",
+  });
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [scope, setScope] = useState<"my" | "all">("my");
   const [viewMode, setViewMode] = useState<"active" | "archived">("active");
+  const [listFilters, setListFilters] = useState<{ status?: string; notified?: boolean }>({});
   const [searchText, setSearchText] = useState<string>("");
   const [sort, setSort] = useState<RepairsSort>({ sortBy: "updatedAt", sortDir: "desc" });
   const [pagination, setPagination] = useState<RepairsPagination>({
@@ -84,6 +106,7 @@ function App() {
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string>("");
   const [profileForm, setProfileForm] = useState({
     fullName: "",
+    recoveryEmail: "",
     profilePhone: "",
     profileLocation: "",
     aboutMe: "",
@@ -101,7 +124,7 @@ function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<Record<string, string>>({});
   const [repairWorkForm, setRepairWorkForm] = useState({
-    status: "IN_PROGRESS" as "IN_PROGRESS" | "WAITING_PARTS" | "READY_FOR_PICKUP" | "CUSTOMER_NOTIFIED" | "COMPLETED" | "CANCELLED",
+    status: "IN_PROGRESS" as "IN_PROGRESS" | "WAITING_PARTS" | "NOTIFY_CUSTOMER" | "READY_FOR_PICKUP" | "COMPLETED" | "CANCELLED",
     outcome: "" as "" | "YES" | "PARTIAL" | "NO",
     successful: null as boolean | null,
     fixDescription: "",
@@ -114,6 +137,7 @@ function App() {
     createdDate: "",
     firstName: "",
     lastName: "",
+    streetAddress: "",
     city: "",
     email: "",
     phone: "",
@@ -128,18 +152,20 @@ function App() {
     fixDescription: string;
     technicianNotes: string;
   } | null>(null);
-  const [newRepair, setNewRepair] = useState({
+  const [newRepair, setNewRepair] = useState(() => ({
     productType: "",
-    createdDate: "",
+    createdDate: dateInputTodayLocal(),
     firstName: "",
     lastName: "",
     city: "",
+    streetAddress: "",
     email: "",
     phone: "",
     itemName: "",
     problemDescription: "",
     assignedToUserId: "",
-  });
+    customerId: "",
+  }));
   const [newRepairer, setNewRepairer] = useState({
     username: "",
     fullName: "",
@@ -149,6 +175,11 @@ function App() {
   const [roleDrafts, setRoleDrafts] = useState<Record<string, UserRoleKey[]>>({});
   const [showThermalPreview, setShowThermalPreview] = useState<boolean>(false);
   const [expandedDetailFields, setExpandedDetailFields] = useState<Record<string, boolean>>({});
+  const [customerHistoryMatches, setCustomerHistoryMatches] = useState<Repair[]>([]);
+  const [isLoadingCustomerHistory, setIsLoadingCustomerHistory] = useState<boolean>(false);
+  const [hasQueriedCustomerHistory, setHasQueriedCustomerHistory] = useState<boolean>(false);
+  const [repairChangeHistory, setRepairChangeHistory] = useState<RepairChangeHistoryEntry[]>([]);
+  const [isLoadingRepairHistory, setIsLoadingRepairHistory] = useState<boolean>(false);
   const [busyActions, setBusyActions] = useState<Record<BusyAction, boolean>>({
     createRepair: false,
     createUser: false,
@@ -160,6 +191,7 @@ function App() {
     generatePairCode: false,
     saveProfile: false,
     changePassword: false,
+    exportCsv: false,
   });
 
   const selectedRepair = useMemo(
@@ -172,6 +204,8 @@ function App() {
   const canEditCustomerIntake = isAdmin || isSupervisor;
   const canManagePrinters = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR"));
   const canCreateRepair = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "POS_USER"));
+  const canUseFunctionHub = canCreateRepair;
+  const canViewArchivedItems = canCreateRepair;
   const canEditRepairFields = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER"));
   const canEditIntakeFields = canCreateRepair;
   const canEditOutcomeFields = canEditRepairFields;
@@ -180,6 +214,7 @@ function App() {
   const canPrintFromDetail = canManagePhotos;
   const canToggleLabelSimulation = canManagePrinters;
   const showAdminTools = viewMode === "active";
+  const mustChangePassword = Boolean(user?.mustChangePassword);
   const currentLang = i18n.language.startsWith("en") ? "en" : "de";
   const selectedPrinterProfile = useMemo(
     () => printerProfiles.find((profile) => profile.id === selectedPrinterProfileId) ?? null,
@@ -188,11 +223,76 @@ function App() {
   const canGeneratePairCode = Boolean(
     selectedPrinterProfileId && (selectedPrinterProfile?.canGeneratePairCode ?? canManagePrinters),
   );
+  const hideRepairWorkspace = showFunctionHub || adminTab === "addRepair";
+  const addRepairHasUnsavedChanges =
+    adminTab === "addRepair" &&
+    Object.values(newRepair).some((value) => String(value).trim().length > 0);
+  const addUserHasUnsavedChanges =
+    adminTab === "addRepairer" &&
+    (newRepairer.username.trim().length > 0 ||
+      newRepairer.fullName.trim().length > 0 ||
+      newRepairer.password.trim().length > 0 ||
+      newRepairer.role !== "REPAIRER");
+  const profileHasUnsavedChanges = Boolean(
+    showProfilePage &&
+      profile &&
+      (profileForm.fullName !== (profile.fullName ?? "") ||
+        profileForm.recoveryEmail !== (profile.recoveryEmail ?? "") ||
+        profileForm.profilePhone !== (profile.profilePhone ?? "") ||
+        profileForm.profileLocation !== (profile.profileLocation ?? "") ||
+        profileForm.aboutMe !== (profile.aboutMe ?? "")),
+  );
+  const intakeHasUnsavedChanges = Boolean(
+    isEditingRepairIntake &&
+      selectedRepair &&
+      (repairIntakeForm.productType !== (selectedRepair.productType ?? "") ||
+        repairIntakeForm.createdDate !== (selectedRepair.createdDate ? String(selectedRepair.createdDate).slice(0, 10) : "") ||
+        repairIntakeForm.firstName !== (selectedRepair.firstName ?? "") ||
+        repairIntakeForm.lastName !== (selectedRepair.lastName ?? "") ||
+        repairIntakeForm.streetAddress !== (selectedRepair.streetAddress ?? "") ||
+        repairIntakeForm.city !== (selectedRepair.city ?? "") ||
+        repairIntakeForm.email !== (selectedRepair.email ?? "") ||
+        repairIntakeForm.phone !== (selectedRepair.phone ?? "") ||
+        repairIntakeForm.itemName !== (selectedRepair.itemName ?? "") ||
+        repairIntakeForm.problemDescription !== (selectedRepair.problemDescription ?? "")),
+  );
+  const currentRepairStatusForForm =
+    selectedRepair?.status === "READY_FOR_PICKUP" && !selectedRepair.notified
+      ? "NOTIFY_CUSTOMER"
+      : selectedRepair?.status === "NEW"
+        ? "IN_PROGRESS"
+        : selectedRepair?.status ?? "IN_PROGRESS";
+  const workHasUnsavedChanges = Boolean(
+    isEditingRepairWork &&
+      selectedRepair &&
+      (repairWorkForm.status !== currentRepairStatusForForm ||
+        repairWorkForm.outcome !== (selectedRepair.outcome ?? "") ||
+        repairWorkForm.successful !== (selectedRepair.successful ?? null) ||
+        repairWorkForm.fixDescription !== (selectedRepair.fixDescription ?? "") ||
+        repairWorkForm.material !== (selectedRepair.material ?? "") ||
+        repairWorkForm.safetyTested !== (selectedRepair.safetyTested ?? null) ||
+        repairWorkForm.technicianNotes !== (selectedRepair.technicianNotes ?? "")),
+  );
+  const hasUnsavedFormChanges =
+    addRepairHasUnsavedChanges ||
+    addUserHasUnsavedChanges ||
+    profileHasUnsavedChanges ||
+    intakeHasUnsavedChanges ||
+    workHasUnsavedChanges;
 
   function onPrinterProfileChange(value: string): void {
     setSelectedPrinterProfileId(value);
     localStorage.setItem("rp_printer_profile_id", value);
     setLatestPairingCode("");
+  }
+
+  function isValidEmail(value: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  function confirmDiscardUnsavedChanges(): boolean {
+    if (!hasUnsavedFormChanges) return true;
+    return window.confirm(t("unsavedChangesConfirm"));
   }
 
   function setBusy(action: BusyAction, value: boolean): void {
@@ -236,6 +336,7 @@ function App() {
     } else {
       localStorage.removeItem("rp_token");
       setUser(null);
+      setShowFunctionHub(false);
       setRepairs([]);
       setMetrics(null);
       setRepairers([]);
@@ -246,13 +347,23 @@ function App() {
       setAccountMenuVisible(false);
       setPasswordForm({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
       setShowPasswordFields({ currentPassword: false, newPassword: false, confirmNewPassword: false });
-      setProfileForm({ fullName: "", profilePhone: "", profileLocation: "", aboutMe: "" });
+      setProfileForm({ fullName: "", recoveryEmail: "", profilePhone: "", profileLocation: "", aboutMe: "" });
       setProfileAvatarUrl((previousUrl) => {
         if (previousUrl) URL.revokeObjectURL(previousUrl);
         return "";
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  useEffect(() => {
+    if (token) return;
+    const url = new URL(window.location.href);
+    const resetToken = (url.searchParams.get("resetToken") ?? "").trim();
+    if (!resetToken) return;
+    setShowForgotPassword(true);
+    setForgotPasswordStep("reset");
+    setForgotPasswordForm((prev) => ({ ...prev, resetToken }));
   }, [token]);
 
   useEffect(() => {
@@ -321,6 +432,25 @@ function App() {
   }, [profileAvatarUrl]);
 
   useEffect(() => {
+    if (!message) return;
+    const timeoutMs = messageType === "error" ? 6000 : 4000;
+    const timeoutId = window.setTimeout(() => {
+      setMessage("");
+    }, timeoutMs);
+    return () => window.clearTimeout(timeoutId);
+  }, [message, messageType]);
+
+  useEffect(() => {
+    if (!hasUnsavedFormChanges) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasUnsavedFormChanges]);
+
+  useEffect(() => {
     if (!selectedRepair) {
       setPhotoPreviewUrls((prev) => {
         Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
@@ -369,6 +499,94 @@ function App() {
   }, [selectedRepair]);
 
   useEffect(() => {
+    const repairId = selectedRepair?.id;
+    if (!repairId) {
+      setRepairChangeHistory([]);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadRepairHistory(): Promise<void> {
+      setIsLoadingRepairHistory(true);
+      try {
+        const response = await api.get<{ history: RepairChangeHistoryEntry[] }>(`/repairs/${repairId}/history`);
+        if (!cancelled) {
+          setRepairChangeHistory(response.data.history);
+        }
+      } catch {
+        if (!cancelled) {
+          setRepairChangeHistory([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingRepairHistory(false);
+        }
+      }
+    }
+
+    void loadRepairHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRepair?.id]);
+
+  useEffect(() => {
+    if (adminTab !== "addRepair") {
+      setCustomerHistoryMatches([]);
+      setIsLoadingCustomerHistory(false);
+      setHasQueriedCustomerHistory(false);
+      return;
+    }
+
+    const firstName = newRepair.firstName.trim();
+    const lastName = newRepair.lastName.trim();
+    const email = newRepair.email.trim();
+    const phone = newRepair.phone.trim();
+    const hasLookupData = Boolean(
+      email ||
+        phone ||
+        (firstName && lastName) ||
+        firstName.length >= 2 ||
+        lastName.length >= 2,
+    );
+
+    if (!hasLookupData) {
+      setCustomerHistoryMatches([]);
+      setIsLoadingCustomerHistory(false);
+      setHasQueriedCustomerHistory(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setIsLoadingCustomerHistory(true);
+      try {
+        const response = await api.get<{ repairs: Repair[] }>("/repairs/customer-history", {
+          params: { firstName, lastName, email, phone },
+        });
+        if (!cancelled) {
+          setCustomerHistoryMatches(response.data.repairs);
+          setHasQueriedCustomerHistory(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setCustomerHistoryMatches([]);
+          setHasQueriedCustomerHistory(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingCustomerHistory(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [adminTab, newRepair.firstName, newRepair.lastName, newRepair.email, newRepair.phone]);
+
+  useEffect(() => {
     if (!selectedRepair) {
       setTranslatedContent(null);
       return;
@@ -408,6 +626,7 @@ function App() {
         createdDate: "",
         firstName: "",
         lastName: "",
+        streetAddress: "",
         city: "",
         email: "",
         phone: "",
@@ -430,6 +649,7 @@ function App() {
       createdDate: selectedRepair.createdDate ? String(selectedRepair.createdDate).slice(0, 10) : "",
       firstName: selectedRepair.firstName ?? "",
       lastName: selectedRepair.lastName ?? "",
+      streetAddress: selectedRepair.streetAddress ?? "",
       city: selectedRepair.city ?? "",
       email: selectedRepair.email ?? "",
       phone: selectedRepair.phone ?? "",
@@ -438,11 +658,11 @@ function App() {
     });
     setRepairWorkForm({
       status:
-        selectedRepair.status === "READY_FOR_PICKUP" && selectedRepair.notified
-          ? "CUSTOMER_NOTIFIED"
+        selectedRepair.status === "READY_FOR_PICKUP" && !selectedRepair.notified
+          ? "NOTIFY_CUSTOMER"
           : selectedRepair.status === "NEW"
             ? "IN_PROGRESS"
-            : (selectedRepair.status as "IN_PROGRESS" | "WAITING_PARTS" | "READY_FOR_PICKUP" | "COMPLETED" | "CANCELLED"),
+            : (selectedRepair.status as "IN_PROGRESS" | "WAITING_PARTS" | "READY_FOR_PICKUP" | "NOTIFY_CUSTOMER" | "COMPLETED" | "CANCELLED"),
       outcome: selectedRepair.outcome ?? "",
       successful: selectedRepair.successful ?? null,
       fixDescription: selectedRepair.fixDescription ?? "",
@@ -523,6 +743,13 @@ function App() {
   async function loadMe(): Promise<void> {
     const response = await api.get<{ user: User }>("/auth/me");
     setUser(response.data.user);
+    if (response.data.user.mustChangePassword) {
+      setShowProfilePage(true);
+    }
+    const hasHubRole = response.data.user.roles.some(
+      (role) => role === "ADMIN" || role === "SUPERVISOR" || role === "POS_USER",
+    );
+    setShowFunctionHub(hasHubRole);
   }
 
   async function loadProfile(): Promise<void> {
@@ -532,6 +759,7 @@ function App() {
       setProfile(nextProfile);
       setProfileForm({
         fullName: nextProfile.fullName ?? "",
+        recoveryEmail: nextProfile.recoveryEmail ?? "",
         profilePhone: nextProfile.profilePhone ?? "",
         profileLocation: nextProfile.profileLocation ?? "",
         aboutMe: nextProfile.aboutMe ?? "",
@@ -569,7 +797,12 @@ function App() {
     sortInput: RepairsSort,
     nextViewMode: "active" | "archived",
     syncUrl = false,
+    nextFilters: { status?: string; notified?: boolean } = listFilters,
+    skipUnsavedChangesGuard = false,
   ): Promise<void> {
+    if (!skipUnsavedChangesGuard && !confirmDiscardUnsavedChanges()) {
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await api.get<{
@@ -585,11 +818,14 @@ function App() {
           sortBy: sortInput.sortBy,
           sortDir: sortInput.sortDir,
           archived: nextViewMode === "archived",
+          status: nextFilters.status || undefined,
+          notified: nextFilters.notified !== undefined ? String(nextFilters.notified) : undefined,
         },
       });
       setRepairs(response.data.repairs);
       setScope(nextScope);
       setSearchText(q);
+      setListFilters(nextFilters);
       setSort(response.data.sort);
       setViewMode(nextViewMode);
       setPagination(response.data.pagination);
@@ -607,7 +843,7 @@ function App() {
     } catch {
       if (nextViewMode === "archived") {
         setMessage(t("archivedViewAdminOnly"));
-        await loadRepairs("all", q, page, sortInput, "active", true);
+        await loadRepairs("all", q, page, sortInput, "active", true, nextFilters, true);
       } else {
         setMessage(t("failedLoadRepairs"));
       }
@@ -705,15 +941,81 @@ function App() {
       const response = await api.post<{ token: string; user: User }>("/auth/login", { username, password });
       setToken(response.data.token);
       setUser(response.data.user);
+      if (response.data.user.mustChangePassword) {
+        setShowProfilePage(true);
+      }
+      const hasHubRole = response.data.user.roles.some(
+        (role) => role === "ADMIN" || role === "SUPERVISOR" || role === "POS_USER",
+      );
+      setShowFunctionHub(hasHubRole);
       setMessage("");
     } catch {
       setMessage(t("loginFailed"));
     }
   }
 
+  async function requestPasswordReset(): Promise<void> {
+    if (!forgotPasswordForm.username.trim()) {
+      showToast(t("usernameRequired"), "error");
+      return;
+    }
+    try {
+      await api.post("/auth/forgot-password", {
+        username: forgotPasswordForm.username.trim(),
+      });
+      showToast(t("forgotPasswordRequestSent"), "info");
+      setForgotPasswordStep("reset");
+    } catch (error: unknown) {
+      const maybeMessage =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: unknown } } }).response?.data?.message === "string"
+          ? ((error as { response: { data: { message: string } } }).response.data.message)
+          : t("forgotPasswordFailed");
+      showToast(maybeMessage, "error");
+    }
+  }
+
+  async function resetPasswordWithToken(): Promise<void> {
+    if (forgotPasswordForm.newPassword !== forgotPasswordForm.confirmNewPassword) {
+      showToast(t("profilePasswordMismatch"), "error");
+      return;
+    }
+    try {
+      await api.post("/auth/reset-password", {
+        token: forgotPasswordForm.resetToken,
+        newPassword: forgotPasswordForm.newPassword,
+      });
+      setForgotPasswordForm({
+        username: "",
+        resetToken: "",
+        newPassword: "",
+        confirmNewPassword: "",
+      });
+      showToast(t("forgotPasswordSubmitted"), "info");
+      setShowForgotPassword(false);
+      setForgotPasswordStep("request");
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("resetToken")) {
+        url.searchParams.delete("resetToken");
+        window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+      }
+    } catch (error: unknown) {
+      const maybeMessage =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { data?: { message?: unknown } } }).response?.data?.message === "string"
+          ? ((error as { response: { data: { message: string } } }).response.data.message)
+          : t("forgotPasswordFailed");
+      showToast(maybeMessage, "error");
+    }
+  }
+
   async function updateAssignment(repairId: string, assignedToUserId: string): Promise<void> {
     await api.patch(`/repairs/${repairId}`, { assignedToUserId: assignedToUserId || null });
-    await loadRepairs(scope, searchText, pagination.page, sort, viewMode);
+    await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
     if (isAdmin) void loadMetrics();
     setMessage(t("assignmentUpdated"));
   }
@@ -727,13 +1029,13 @@ function App() {
     await api.post(`/repairs/${repairId}/photos`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
-    await loadRepairs(scope, searchText, pagination.page, sort, viewMode);
+    await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
     setMessage(t("photosUploaded"));
   }
 
   async function removePhoto(repairId: string, photoId: string): Promise<void> {
     await api.delete(`/repairs/${repairId}/photos/${photoId}`);
-    await loadRepairs(scope, searchText, pagination.page, sort, viewMode);
+    await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
     setMessage(t("photoRemoved"));
   }
 
@@ -743,7 +1045,7 @@ function App() {
     setBusy("deleteRepair", true);
     try {
       await api.delete(`/repairs/${repairId}`);
-      await loadRepairs(scope, searchText, pagination.page, sort, viewMode);
+      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
       showToast(t("repairDeleted"));
     } finally {
       setBusy("deleteRepair", false);
@@ -752,12 +1054,12 @@ function App() {
 
   async function saveRepairWork(repairId: string): Promise<void> {
     const selectedStatus = repairWorkForm.status;
-    const apiStatus = selectedStatus === "CUSTOMER_NOTIFIED" ? "READY_FOR_PICKUP" : selectedStatus;
+    const apiStatus = selectedStatus === "NOTIFY_CUSTOMER" ? "READY_FOR_PICKUP" : selectedStatus;
     const apiNotified =
-      selectedStatus === "CUSTOMER_NOTIFIED"
-        ? true
+      selectedStatus === "NOTIFY_CUSTOMER"
+        ? false
         : selectedStatus === "READY_FOR_PICKUP"
-          ? false
+          ? true
           : null;
     setBusy("saveRepairWork", true);
     try {
@@ -771,12 +1073,21 @@ function App() {
         safetyTested: repairWorkForm.safetyTested,
         technicianNotes: repairWorkForm.technicianNotes || null,
       });
-      await loadRepairs(scope, searchText, pagination.page, sort, viewMode);
+      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
       showToast(t("repairFieldsSaved"));
       setIsEditingRepairWork(false);
     } finally {
       setBusy("saveRepairWork", false);
     }
+  }
+
+  async function setCustomerNotified(repairId: string, notified: boolean): Promise<void> {
+    await api.patch<{ repair: Repair }>(`/repairs/${repairId}`, { notified });
+    setRepairs((prev) => prev.map((repair) => (repair.id === repairId ? { ...repair, notified } : repair)));
+    showToast(
+      notified ? t("customerNotifiedUpdatedYes") : t("customerNotifiedUpdatedNo"),
+      "info",
+    );
   }
 
   async function printLabel(repairId: string): Promise<void> {
@@ -821,6 +1132,10 @@ function App() {
   }
 
   async function createRepair(): Promise<void> {
+    if (newRepair.email.trim() && !isValidEmail(newRepair.email.trim())) {
+      showToast(t("invalidEmailAddress"), "error");
+      return;
+    }
     setBusy("createRepair", true);
     try {
       await api.post("/repairs", {
@@ -829,25 +1144,29 @@ function App() {
         firstName: newRepair.firstName || undefined,
         lastName: newRepair.lastName || undefined,
         city: newRepair.city || undefined,
+        streetAddress: newRepair.streetAddress || undefined,
         email: newRepair.email || undefined,
         phone: newRepair.phone || undefined,
         itemName: newRepair.itemName || undefined,
         problemDescription: newRepair.problemDescription || undefined,
         assignedToUserId: newRepair.assignedToUserId || null,
+        customerId: newRepair.customerId.trim() || undefined,
       });
       setNewRepair({
         productType: "",
-        createdDate: "",
+        createdDate: dateInputTodayLocal(),
         firstName: "",
         lastName: "",
         city: "",
+        streetAddress: "",
         email: "",
         phone: "",
         itemName: "",
         problemDescription: "",
         assignedToUserId: "",
+        customerId: "",
       });
-      await loadRepairs(scope, searchText, 1, sort, viewMode);
+      await loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters, true);
       if (isAdmin) void loadMetrics();
       showToast(t("repairCreated"));
     } finally {
@@ -883,14 +1202,19 @@ function App() {
     const newPassword = window.prompt(t("passwordPrompt"));
     if (!newPassword) return;
     await api.post(`/users/${userId}/reset-password`, { newPassword });
-    setMessage(t("passwordResetSuccess"));
+    showToast(t("passwordResetRequiresChange"), "info");
   }
 
   async function saveMyProfile(): Promise<void> {
+    if (profileForm.recoveryEmail.trim() && !isValidEmail(profileForm.recoveryEmail.trim())) {
+      showToast(t("invalidEmailAddress"), "error");
+      return;
+    }
     setBusy("saveProfile", true);
     try {
       const response = await api.patch<{ profile: UserProfile }>("/profile", {
         fullName: profileForm.fullName,
+        recoveryEmail: profileForm.recoveryEmail || null,
         profilePhone: profileForm.profilePhone || null,
         profileLocation: profileForm.profileLocation || null,
         aboutMe: profileForm.aboutMe || null,
@@ -928,6 +1252,7 @@ function App() {
       });
       setPasswordForm({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
       setShowPasswordFields({ currentPassword: false, newPassword: false, confirmNewPassword: false });
+      setUser((prev) => (prev ? { ...prev, mustChangePassword: false } : prev));
       showToast(t("profilePasswordChanged"));
     } finally {
       setBusy("changePassword", false);
@@ -955,6 +1280,10 @@ function App() {
   }
 
   async function saveRepairIntake(repairId: string): Promise<void> {
+    if (repairIntakeForm.email.trim() && !isValidEmail(repairIntakeForm.email.trim())) {
+      showToast(t("invalidEmailAddress"), "error");
+      return;
+    }
     setBusy("saveRepairIntake", true);
     try {
       await api.patch(`/repairs/${repairId}`, {
@@ -964,13 +1293,14 @@ function App() {
           : null,
         firstName: repairIntakeForm.firstName || null,
         lastName: repairIntakeForm.lastName || null,
+        streetAddress: repairIntakeForm.streetAddress || null,
         city: repairIntakeForm.city || null,
         email: repairIntakeForm.email || null,
         phone: repairIntakeForm.phone || null,
         itemName: repairIntakeForm.itemName || null,
         problemDescription: repairIntakeForm.problemDescription || null,
       });
-      await loadRepairs(scope, searchText, pagination.page, sort, viewMode);
+      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
       showToast(t("customerIntakeSaved"));
       setIsEditingRepairIntake(false);
     } finally {
@@ -997,12 +1327,20 @@ function App() {
     void loadRepairs(scope, searchText, 1, nextSort, viewMode);
   }
 
+  function sortIndicator(sortBy: string): string {
+    if (sort.sortBy !== sortBy) return "";
+    return sort.sortDir === "asc" ? " ↑" : " ↓";
+  }
+
   function startResizing(): void {
     if (window.innerWidth <= 900) return;
     setIsResizing(true);
   }
 
   function openRepairDetail(repairId: string): void {
+    if (repairId !== selectedRepairId && !confirmDiscardUnsavedChanges()) {
+      return;
+    }
     setSelectedRepairId(repairId);
     if (isMobile) setMobileView("detail");
   }
@@ -1066,12 +1404,118 @@ function App() {
 
   function logout(): void {
     setToken(null);
+    setShowFunctionHub(false);
+    setShowForgotPassword(false);
+    setForgotPasswordStep("request");
+    setForgotPasswordForm({
+      username: "",
+      resetToken: "",
+      newPassword: "",
+      confirmNewPassword: "",
+    });
     closeAccountMenu();
     setMessage("");
   }
 
   async function changeLanguage(lang: "de" | "en"): Promise<void> {
     await i18n.changeLanguage(lang);
+  }
+
+  async function exportRepairsCsv(): Promise<void> {
+    if (!isAdmin) return;
+    setBusy("exportCsv", true);
+    try {
+      const response = await api.get("/repairs/export/csv", { responseType: "blob" });
+      const blob = response.data as Blob;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const today = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `repairs-export-${today}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast(t("csvExportStarted"));
+    } catch {
+      showToast(t("csvExportFailed"), "error");
+    } finally {
+      setBusy("exportCsv", false);
+    }
+  }
+
+  function escapeHtml(value: string): string {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll("\"", "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function printRepairA4(repair: Repair): void {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      showToast(t("a4PrintPopupBlocked"), "error");
+      return;
+    }
+    const rows = [
+      [t("reference"), formatRepairRef(repair)],
+      [t("status"), formatStatus(repair.status, repair.notified ?? false)],
+      [t("articleType"), formatArticleType(repair.productType)],
+      [t("dateBroughtIn"), formatDisplayDate(repair.createdDate)],
+      [t("fullName"), formatCustomerFullName(repair)],
+      [t("customerStreetAddress"), repair.streetAddress ?? "-"],
+      [t("customerCity"), repair.city ?? "-"],
+      [t("customerEmail"), repair.email ?? "-"],
+      [t("customerPhone"), repair.phone ?? "-"],
+      [t("itemDescription"), repair.itemName ?? "-"],
+      [t("problem"), repair.problemDescription ?? "-"],
+      [t("fix"), repair.fixDescription ?? "-"],
+      [t("material"), repair.material ?? "-"],
+      [t("remarks"), repair.technicianNotes ?? "-"],
+      [t("assigned"), repair.assignedToUser?.fullName ?? t("unassigned")],
+      [t("lastUpdate"), formatDisplayDateTime(repair.updatedAt)],
+    ];
+    const rowsHtml = rows
+      .map(
+        ([label, value]) =>
+          `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(String(value))}</td></tr>`,
+      )
+      .join("");
+    const logoUrl = `${window.location.origin}${APP_LOGO_SRC}`;
+
+    printWindow.document.write(`<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(t("a4PrintTitle"))}</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
+      .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+      .brand img { width: 92px; height: auto; border-radius: 8px; }
+      h1 { margin: 0 0 8px; font-size: 22px; }
+      p { margin: 0 0 16px; color: #444; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; vertical-align: top; border: 1px solid #d0d0d0; padding: 8px; }
+      th { width: 28%; background: #f5f5f5; }
+      @media print { body { margin: 10mm; } }
+    </style>
+  </head>
+  <body>
+    <div class="brand">
+      <img src="${escapeHtml(logoUrl)}" alt="Repair Kafi logo" />
+      <h1>${escapeHtml(t("repairDetail"))}</h1>
+    </div>
+    <p>${escapeHtml(t("a4PrintSubtitle"))}</p>
+    <table>${rowsHtml}</table>
+  </body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    window.setTimeout(() => {
+      printWindow.print();
+    }, 250);
   }
 
   function formatDisplayDate(value: string | null): string {
@@ -1097,7 +1541,7 @@ function App() {
     return t("unknown");
   }
 
-  function formatStatus(value: string | null | undefined, notified = false): string {
+  function formatStatus(value: string | null | undefined, notified?: boolean | null): string {
     switch (value) {
       case "NEW":
         return t("statusNew");
@@ -1106,7 +1550,9 @@ function App() {
       case "WAITING_PARTS":
         return t("statusWaitingParts");
       case "READY_FOR_PICKUP":
-        return notified ? t("statusCustomerNotified") : t("statusReadyForPickup");
+        if (notified === true) return t("statusReadyForPickup");
+        if (notified === false || notified === null) return t("statusNotifyCustomer");
+        return t("statusReadyForPickup");
       case "COMPLETED":
         return t("statusCompleted");
       case "CANCELLED":
@@ -1201,11 +1647,39 @@ function App() {
     return canEditRepairFields && (isAdmin || isSupervisor || repair.assignedToUserId === user.id);
   }
 
+  function canToggleCustomerNotified(repair: Repair): boolean {
+    return (
+      canAssignRepairs &&
+      (repair.status === "READY_FOR_PICKUP" || repair.status === "NOTIFY_CUSTOMER")
+    );
+  }
+
   function formatCustomerFullName(repair: Repair): string {
     const first = (repair.firstName ?? "").trim();
     const last = (repair.lastName ?? "").trim();
     const full = `${first} ${last}`.trim();
     return full || "-";
+  }
+
+  function applyCustomerFromHistory(repair: Repair): void {
+    setNewRepair((prev) => ({
+      ...prev,
+      customerId: repair.customerId ?? "",
+      firstName: repair.firstName ?? "",
+      lastName: repair.lastName ?? "",
+      streetAddress: repair.streetAddress ?? "",
+      city: repair.city ?? "",
+      email: repair.email ?? "",
+      phone: repair.phone ?? "",
+      itemName: "",
+      problemDescription: "",
+    }));
+    showToast(t("customerHistoryApplied"), "success");
+  }
+
+  function clearLinkedCustomer(): void {
+    setNewRepair((prev) => ({ ...prev, customerId: "" }));
+    showToast(t("clearLinkedCustomerDone"), "success");
   }
 
   function formatArticleType(value: string | null | undefined): string {
@@ -1220,6 +1694,39 @@ function App() {
     return Math.max(4, Math.round((value / max) * 100));
   }
 
+  function activeFilterLabel(): string | null {
+    if (listFilters.status === "NOTIFY_CUSTOMER") return t("filterNotifyCustomer");
+    if (listFilters.status === "READY_FOR_PICKUP" && listFilters.notified === true) {
+      return t("filterReadyPickup");
+    }
+    if (listFilters.notified === true) return t("filterCustomerNotified");
+    return null;
+  }
+
+  function formatChangeType(changeType: string): string {
+    switch (changeType) {
+      case "CREATE":
+        return t("historyCreate");
+      case "PATCH":
+        return t("historyPatch");
+      case "WORK_UPDATE":
+        return t("historyWorkUpdate");
+      case "PHOTO_ADD":
+        return t("historyPhotoAdd");
+      case "PHOTO_REMOVE":
+        return t("historyPhotoRemove");
+      default:
+        return changeType;
+    }
+  }
+
+  function formatTelHref(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const cleaned = value.replace(/[^+\d]/g, "");
+    if (!cleaned) return null;
+    return `tel:${cleaned}`;
+  }
+
   if (!token) {
     return (
       <main className="container login-screen">
@@ -1231,6 +1738,7 @@ function App() {
           }}
         >
           <header className="login-card-header">
+            <img className="login-brand-logo" src={APP_LOGO_SRC} alt="Repair Kafi logo" />
             <h1>{t("appTitle")}</h1>
             <p>{t("login")}</p>
           </header>
@@ -1246,8 +1754,154 @@ function App() {
           </label>
 
           <button type="submit" className="login-submit">{t("login")}</button>
+          <button
+            type="button"
+            className="login-link-button"
+            onClick={() => {
+              setShowForgotPassword((prev) => !prev);
+              setForgotPasswordStep("request");
+            }}
+          >
+            {showForgotPassword ? t("cancelEdit") : t("forgotPassword")}
+          </button>
+          {showForgotPassword && (
+            <div className="forgot-password-panel">
+              <label className="login-field">
+                <span>{t("username")}</span>
+                <input
+                  value={forgotPasswordForm.username}
+                  onChange={(event) =>
+                    setForgotPasswordForm((prev) => ({ ...prev, username: event.target.value }))
+                  }
+                  autoComplete="username"
+                />
+              </label>
+              {forgotPasswordStep === "request" ? (
+                <>
+                  <button
+                    type="button"
+                    className="login-submit"
+                    onClick={() => void requestPasswordReset()}
+                  >
+                    {t("requestResetEmail")}
+                  </button>
+                  <p className="field-help">{t("forgotPasswordHelp")}</p>
+                </>
+              ) : (
+                <>
+                  <label className="login-field">
+                    <span>{t("resetToken")}</span>
+                    <input
+                      value={forgotPasswordForm.resetToken}
+                      onChange={(event) =>
+                        setForgotPasswordForm((prev) => ({ ...prev, resetToken: event.target.value }))
+                      }
+                    />
+                  </label>
+                  <label className="login-field">
+                    <span>{t("profileNewPassword")}</span>
+                    <input
+                      type="password"
+                      value={forgotPasswordForm.newPassword}
+                      onChange={(event) =>
+                        setForgotPasswordForm((prev) => ({ ...prev, newPassword: event.target.value }))
+                      }
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <label className="login-field">
+                    <span>{t("profileConfirmPassword")}</span>
+                    <input
+                      type="password"
+                      value={forgotPasswordForm.confirmNewPassword}
+                      onChange={(event) =>
+                        setForgotPasswordForm((prev) => ({ ...prev, confirmNewPassword: event.target.value }))
+                      }
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="login-submit"
+                    onClick={() => void resetPasswordWithToken()}
+                  >
+                    {t("submitPasswordReset")}
+                  </button>
+                  <button
+                    type="button"
+                    className="login-link-button"
+                    onClick={() => setForgotPasswordStep("request")}
+                  >
+                    {t("requestResetEmailAgain")}
+                  </button>
+                  <p className="field-help">{t("forgotPasswordTokenHelp")}</p>
+                </>
+              )}
+            </div>
+          )}
           {message && <p className={`message ${messageType} login-message`}>{message}</p>}
         </form>
+      </main>
+    );
+  }
+
+  if (mustChangePassword) {
+    return (
+      <main className="container login-screen">
+        <section className="card login-card">
+          <header className="login-card-header">
+            <img className="login-brand-logo" src={APP_LOGO_SRC} alt="Repair Kafi logo" />
+            <h1>{t("forcePasswordChangeTitle")}</h1>
+            <p>{t("forcePasswordChangeHelp")}</p>
+          </header>
+          <div className="profile-password-grid">
+            <label className="wide">
+              {t("profileCurrentPassword")}
+              <div className="password-field">
+                <input
+                  type={showPasswordFields.currentPassword ? "text" : "password"}
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                />
+                <button type="button" onClick={() => togglePasswordField("currentPassword")}>
+                  {showPasswordFields.currentPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </label>
+            <label>
+              {t("profileNewPassword")}
+              <div className="password-field">
+                <input
+                  type={showPasswordFields.newPassword ? "text" : "password"}
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+                />
+                <button type="button" onClick={() => togglePasswordField("newPassword")}>
+                  {showPasswordFields.newPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </label>
+            <label>
+              {t("profileConfirmPassword")}
+              <div className="password-field">
+                <input
+                  type={showPasswordFields.confirmNewPassword ? "text" : "password"}
+                  value={passwordForm.confirmNewPassword}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmNewPassword: e.target.value }))}
+                />
+                <button type="button" onClick={() => togglePasswordField("confirmNewPassword")}>
+                  {showPasswordFields.confirmNewPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </label>
+          </div>
+          <div className="detail-header-actions">
+            <button disabled={busyActions.changePassword} onClick={() => void changeMyPassword()}>
+              {busyActions.changePassword ? t("loadingChangePassword") : t("profileChangePassword")}
+            </button>
+            <button type="button" onClick={logout}>{t("logout")}</button>
+          </div>
+        </section>
       </main>
     );
   }
@@ -1256,7 +1910,10 @@ function App() {
     <main className="container" style={{ "--left-pane-width": `${leftPaneWidth}px` } as CSSProperties}>
       <header className="header">
         <div className="header-top">
-          <h1>{t("appTitle")}</h1>
+          <div className="header-brand">
+            <img className="header-brand-logo" src={APP_LOGO_SRC} alt="Repair Kafi logo" />
+            <h1>{t("appTitle")}</h1>
+          </div>
           <button
             type="button"
             className="header-user-trigger"
@@ -1291,6 +1948,20 @@ function App() {
                   <button type="button" onClick={closeAccountMenu}>{t("close")}</button>
                 </div>
                 <div className="account-drawer-actions">
+                  {showAdminTools && (
+                    <button
+                      type="button"
+                      title={t("settings")}
+                      onClick={() => {
+                        setShowFunctionHub(false);
+                        setShowProfilePage(false);
+                        setAdminTab("settings");
+                        closeAccountMenu();
+                      }}
+                    >
+                      <Printer size={14} /> {t("settings")}
+                    </button>
+                  )}
                   <button
                     type="button"
                     title={t("profile")}
@@ -1336,11 +2007,25 @@ function App() {
           </button>
         )}
 
+        {(!showFunctionHub || !canUseFunctionHub) && (
         <div className={`header-actions ${isMobile ? "mobile-actions" : ""} ${mobileMenuOpen ? "open" : ""}`}>
+          {canUseFunctionHub && (
+            <button
+              title={t("home")}
+              onClick={() => {
+                setAdminTab("none");
+                setShowFunctionHub(true);
+                closeMobileMenu();
+              }}
+            >
+              <Home size={14} /> {t("home")}
+            </button>
+          )}        
           <button
             title={t("myRepairs")}
             onClick={() => {
-              void loadRepairs("my", searchText, 1, sort, "active", true);
+              void loadRepairs("my", searchText, 1, sort, "active", true, {});
+              setShowFunctionHub(false);
               closeMobileMenu();
             }}
           >
@@ -1349,28 +2034,92 @@ function App() {
           <button
             title={t("allRepairs")}
             onClick={() => {
-              void loadRepairs("all", searchText, 1, sort, "active", true);
+              void loadRepairs("all", searchText, 1, sort, "active", true, {});
+              setShowFunctionHub(false);
               closeMobileMenu();
             }}
           >
             {t("allRepairs")}
           </button>
-          {isAdmin && (
+          {canViewArchivedItems && (
             <button
               title={t("archivedItems")}
               onClick={() => {
-                void loadRepairs("all", searchText, 1, sort, "archived", true);
+                void loadRepairs("all", searchText, 1, sort, "archived", true, {});
+                setShowFunctionHub(false);
                 closeMobileMenu();
               }}
             >
               {t("archivedItems")}
             </button>
           )}
+          {showAdminTools && isAdmin && (
+            <button
+              className={adminTab === "dashboard" ? "active" : ""}
+              title={t("adminDashboard")}
+              onClick={() => {
+                setShowFunctionHub(false);
+                setAdminTab((prev) => (prev === "dashboard" ? "none" : "dashboard"));
+                closeMobileMenu();
+              }}
+            >
+              {t("adminDashboard")}
+            </button>
+          )}
+          {showAdminTools && canCreateRepair && (
+            <button
+              className={adminTab === "addRepair" ? "active" : ""}
+              title={t("adminAddRepair")}
+              onClick={() => {
+                setShowFunctionHub(false);
+                setAdminTab((prev) => (prev === "addRepair" ? "none" : "addRepair"));
+                closeMobileMenu();
+              }}
+            >
+              {t("adminAddRepair")}
+            </button>
+          )}
+          {showAdminTools && canManageUsers && (
+            <>
+              <button
+                className={adminTab === "addRepairer" ? "active" : ""}
+                title={t("addUser")}
+                onClick={() => {
+                  setShowFunctionHub(false);
+                  setAdminTab((prev) => (prev === "addRepairer" ? "none" : "addRepairer"));
+                  closeMobileMenu();
+                }}
+              >
+                {t("addUser")}
+              </button>
+              <button
+                className={adminTab === "manageRepairers" ? "active" : ""}
+                title={t("manageUsers")}
+                onClick={() => {
+                  setShowFunctionHub(false);
+                  setAdminTab((prev) => (prev === "manageRepairers" ? "none" : "manageRepairers"));
+                  closeMobileMenu();
+                }}
+              >
+                {t("manageUsers")}
+              </button>
+            </>
+          )}
+          {isAdmin && (
+            <button
+              title={t("exportCsv")}
+              disabled={busyActions.exportCsv}
+              onClick={() => void exportRepairsCsv()}
+            >
+              <FileDown size={14} /> {busyActions.exportCsv ? t("loadingExportCsv") : t("exportCsv")}
+            </button>
+          )}
           {viewMode === "archived" && (
             <button
               title={t("activeItems")}
               onClick={() => {
-                void loadRepairs("all", searchText, 1, sort, "active", true);
+                void loadRepairs("all", searchText, 1, sort, "active", true, {});
+                setShowFunctionHub(false);
                 closeMobileMenu();
               }}
             >
@@ -1378,6 +2127,7 @@ function App() {
             </button>
           )}
         </div>
+        )}
       </header>
       {message && <p className={`message ${messageType}`}>{message}</p>}
       {showProfilePage && (
@@ -1415,6 +2165,15 @@ function App() {
                     value={profileForm.fullName}
                     onChange={(e) => setProfileForm((prev) => ({ ...prev, fullName: e.target.value }))}
                   />
+                </label>
+                <label>
+                  {t("recoveryEmail")}
+                  <input
+                    type="email"
+                    value={profileForm.recoveryEmail}
+                    onChange={(e) => setProfileForm((prev) => ({ ...prev, recoveryEmail: e.target.value }))}
+                  />
+                  <span className="field-help">{t("recoveryEmailHelp")}</span>
                 </label>
                 <label>
                   {t("customerPhone")}
@@ -1494,51 +2253,8 @@ function App() {
           </div>
         </section>
       )}
-      {showAdminTools && (
+      {showAdminTools && adminTab !== "none" && (!showFunctionHub || !canUseFunctionHub) && (
         <section className="card admin-tabs-container">
-          <div className="admin-tabs">
-            {isAdmin && (
-              <button
-                className={adminTab === "dashboard" ? "active" : ""}
-                onClick={() => setAdminTab((prev) => (prev === "dashboard" ? "none" : "dashboard"))}
-              >
-                {t("adminDashboard")}
-              </button>
-            )}
-            {canCreateRepair && (
-              <button
-                className={adminTab === "addRepair" ? "active" : ""}
-                onClick={() => setAdminTab((prev) => (prev === "addRepair" ? "none" : "addRepair"))}
-              >
-                {t("adminAddRepair")}
-              </button>
-            )}
-            {canManageUsers && (
-              <>
-                <button
-                  className={adminTab === "addRepairer" ? "active" : ""}
-                  onClick={() => setAdminTab((prev) => (prev === "addRepairer" ? "none" : "addRepairer"))}
-                >
-                  {t("addUser")}
-                </button>
-                <button
-                  className={adminTab === "manageRepairers" ? "active" : ""}
-                  onClick={() => setAdminTab((prev) => (prev === "manageRepairers" ? "none" : "manageRepairers"))}
-                >
-                  {t("manageUsers")}
-                </button>
-              </>
-            )}
-            {showAdminTools && (
-              <button
-                className={adminTab === "settings" ? "active" : ""}
-                onClick={() => setAdminTab((prev) => (prev === "settings" ? "none" : "settings"))}
-              >
-                {t("settings")}
-              </button>
-            )}
-          </div>
-
           {adminTab === "dashboard" && isAdmin && (
             <div className="admin-tab-content">
               <h2>{t("adminDashboard")}</h2>
@@ -1602,92 +2318,153 @@ function App() {
           {adminTab === "addRepair" && canCreateRepair && (
             <div className="admin-tab-content">
               <h3>{t("addRepair")}</h3>
-              <div className="add-repair-grid">
-                <label>
-                  {t("articleType")}
-                  <select
-                    value={newRepair.productType}
-                    onChange={(e) => setNewRepair((prev) => ({ ...prev, productType: e.target.value }))}
-                  >
-                    <option value="">-</option>
-                    {ARTICLE_TYPE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>{t(`articleTypeOption.${option}`)}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  {t("dateReceived")}
-                  <input
-                    type="date"
-                    value={newRepair.createdDate}
-                    onChange={(e) => setNewRepair((prev) => ({ ...prev, createdDate: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  {t("customerFirstName")}
-                  <input
-                    value={newRepair.firstName}
-                    onChange={(e) => setNewRepair((prev) => ({ ...prev, firstName: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  {t("customerLastName")}
-                  <input
-                    value={newRepair.lastName}
-                    onChange={(e) => setNewRepair((prev) => ({ ...prev, lastName: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  {t("customerCity")}
-                  <input
-                    value={newRepair.city}
-                    onChange={(e) => setNewRepair((prev) => ({ ...prev, city: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  {t("customerEmail")}
-                  <input
-                    value={newRepair.email}
-                    onChange={(e) => setNewRepair((prev) => ({ ...prev, email: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  {t("customerPhone")}
-                  <input
-                    value={newRepair.phone}
-                    onChange={(e) => setNewRepair((prev) => ({ ...prev, phone: e.target.value }))}
-                  />
-                </label>
-                <label className="wide">
-                  {t("itemDescription")}
-                  <input
-                    value={newRepair.itemName}
-                    onChange={(e) => setNewRepair((prev) => ({ ...prev, itemName: e.target.value }))}
-                  />
-                </label>
-                <label className="wide">
-                  {t("problem")}
-                  <input
-                    value={newRepair.problemDescription}
-                    onChange={(e) => setNewRepair((prev) => ({ ...prev, problemDescription: e.target.value }))}
-                  />
-                </label>
-                {assignees.length > 0 && canAssignRepairs && (
+              <div className="add-repair-section">
+                <h4 className="add-repair-section-title">{t("sectionCustomerDetails")}</h4>
+                <div className="add-repair-grid">
                   <label>
-                    {t("assigned")}
+                    {t("customerFirstName")}
+                    <input
+                      value={newRepair.firstName}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, firstName: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    {t("customerLastName")}
+                    <input
+                      value={newRepair.lastName}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, lastName: e.target.value }))}
+                    />
+                  </label>
+                  <label className="wide">
+                    {t("customerStreetAddress")}
+                    <input
+                      value={newRepair.streetAddress}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, streetAddress: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    {t("customerCity")}
+                    <input
+                      value={newRepair.city}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, city: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    {t("customerEmail")}
+                    <input
+                      type="email"
+                      value={newRepair.email}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, email: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    {t("customerPhone")}
+                    <input
+                      value={newRepair.phone}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, phone: e.target.value }))}
+                    />
+                  </label>
+                  {newRepair.customerId.trim() !== "" && (
+                    <div className="add-repair-clear-link">
+                      <button type="button" className="clear-linked-customer-btn" onClick={clearLinkedCustomer}>
+                        {t("clearLinkedCustomer")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {(isLoadingCustomerHistory || hasQueriedCustomerHistory) && (
+                  <div className="detail-section add-repair-history">
+                    <h4>{t("customerHistoryTitle")}</h4>
+                    {isLoadingCustomerHistory ? (
+                      <p className="field-help">{t("loading")}</p>
+                    ) : (
+                      <>
+                        <p className="field-help">
+                          {t("customerHistoryCount", { count: customerHistoryMatches.length })}
+                        </p>
+                        {customerHistoryMatches.length === 0 ? (
+                          <p className="field-help">{t("customerHistoryNoMatches")}</p>
+                        ) : (
+                          <>
+                            <p className="field-help">{t("customerHistoryTapHint")}</p>
+                            <ul className="customer-history-list">
+                              {customerHistoryMatches.map((repair) => (
+                                <li key={repair.id}>
+                                  <button
+                                    type="button"
+                                    className="customer-history-row"
+                                    onClick={() => applyCustomerFromHistory(repair)}
+                                  >
+                                    <span className="customer-history-name">{formatCustomerFullName(repair)}</span>
+                                    <span className="customer-history-meta">
+                                      {formatRepairRef(repair)} · {repair.itemName ?? t("noProduct")} ·{" "}
+                                      {formatStatus(repair.status, repair.notified)}
+                                    </span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="add-repair-section">
+                <h4 className="add-repair-section-title">{t("sectionRepairDetails")}</h4>
+                <div className="add-repair-grid">
+                  <label>
+                    {t("articleType")}
                     <select
-                      value={newRepair.assignedToUserId}
-                      onChange={(e) => setNewRepair((prev) => ({ ...prev, assignedToUserId: e.target.value }))}
+                      value={newRepair.productType}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, productType: e.target.value }))}
                     >
-                      <option value="">{t("unassigned")}</option>
-                      {assignees.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.fullName}
-                        </option>
+                      <option value="">-</option>
+                      {ARTICLE_TYPE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>{t(`articleTypeOption.${option}`)}</option>
                       ))}
                     </select>
                   </label>
-                )}
+                  <label>
+                    {t("dateReceived")}
+                    <input
+                      type="date"
+                      value={newRepair.createdDate}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, createdDate: e.target.value }))}
+                    />
+                  </label>
+                  <label className="wide">
+                    {t("itemDescription")}
+                    <input
+                      value={newRepair.itemName}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, itemName: e.target.value }))}
+                    />
+                  </label>
+                  <label className="wide">
+                    {t("problem")}
+                    <input
+                      value={newRepair.problemDescription}
+                      onChange={(e) => setNewRepair((prev) => ({ ...prev, problemDescription: e.target.value }))}
+                    />
+                  </label>
+                  {assignees.length > 0 && canAssignRepairs && (
+                    <label>
+                      {t("assigned")}
+                      <select
+                        value={newRepair.assignedToUserId}
+                        onChange={(e) => setNewRepair((prev) => ({ ...prev, assignedToUserId: e.target.value }))}
+                      >
+                        <option value="">{t("unassigned")}</option>
+                        {assignees.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.fullName}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
               </div>
               <button
                 className="add-repair-submit"
@@ -1773,6 +2550,7 @@ function App() {
                   <tr>
                     <th>{t("username")}</th>
                     <th>{t("name")}</th>
+                    <th>{t("customerEmail")}</th>
                     <th>{t("role")}</th>
                     <th>{t("status")}</th>
                     <th>{t("actions")}</th>
@@ -1783,6 +2561,7 @@ function App() {
                     <tr key={repairer.id}>
                       <td>{repairer.username}</td>
                       <td>{repairer.fullName}</td>
+                      <td>{repairer.recoveryEmail ?? "-"}</td>
                       <td>
                         <div className="role-pill-list">
                           {ROLE_OPTIONS.map((role) => (
@@ -1799,16 +2578,30 @@ function App() {
                       </td>
                       <td>{repairer.isActive ? t("active") : t("inactive")}</td>
                       <td>
-                        <button disabled={busyActions.saveRoles} onClick={() => void saveUserRoles(repairer.id)}>
-                          {busyActions.saveRoles ? t("loadingSaveRoles") : t("saveRoles")}
+                        <button
+                          className="manage-user-action-button"
+                          title={busyActions.saveRoles ? t("loadingSaveRoles") : t("saveRoles")}
+                          aria-label={busyActions.saveRoles ? t("loadingSaveRoles") : t("saveRoles")}
+                          disabled={busyActions.saveRoles}
+                          onClick={() => void saveUserRoles(repairer.id)}
+                        >
+                          <Save size={14} />
                         </button>
                         <button
+                          className="manage-user-action-button"
+                          title={repairer.isActive ? t("deactivate") : t("activate")}
+                          aria-label={repairer.isActive ? t("deactivate") : t("activate")}
                           onClick={() => void setRepairerStatus(repairer.id, !repairer.isActive)}
                         >
-                          {repairer.isActive ? t("deactivate") : t("activate")}
+                          <Power size={14} />
                         </button>
-                        <button onClick={() => void resetRepairerPassword(repairer.id)}>
-                          {t("resetPassword")}
+                        <button
+                          className="manage-user-action-button"
+                          title={t("resetPassword")}
+                          aria-label={t("resetPassword")}
+                          onClick={() => void resetRepairerPassword(repairer.id)}
+                        >
+                          <KeyRound size={14} />
                         </button>
                       </td>
                     </tr>
@@ -1838,15 +2631,6 @@ function App() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label>
-                  {t("settingsLabelPreview")}
-                  <button
-                    type="button"
-                    onClick={() => setShowThermalPreview((prev) => !prev)}
-                  >
-                    {showThermalPreview ? t("hideSimulationLabel") : t("showSimulationLabel")}
-                  </button>
                 </label>
               </div>
               {canGeneratePairCode && (
@@ -1897,6 +2681,104 @@ function App() {
           )}
         </section>
       )}
+      {showFunctionHub && (
+        <section className="card function-hub-card">
+          <h2>{t("functionHubTitle")}</h2>
+          <p className="field-help">{t("functionHubSubtitle")}</p>
+          <div className="function-hub-actions">
+            <button
+              type="button"
+              onClick={() => {
+                void loadRepairs("all", searchText, 1, sort, "active", true, {});
+                setAdminTab("none");
+                setShowFunctionHub(false);
+              }}
+            >
+              {t("allRepairs")}
+            </button>
+            {canViewArchivedItems && (
+              <button
+                type="button"
+                onClick={() => {
+                  void loadRepairs("all", searchText, 1, sort, "archived", true, {});
+                  setAdminTab("none");
+                  setShowFunctionHub(false);
+                }}
+              >
+                {t("archivedItems")}
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminTab("dashboard");
+                  setShowFunctionHub(false);
+                }}
+              >
+                {t("adminDashboard")}
+              </button>
+            )}
+            {canCreateRepair && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminTab("addRepair");
+                  setShowFunctionHub(false);
+                }}
+              >
+                {t("createRepair")}
+              </button>
+            )}
+            {canManageUsers && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminTab("manageRepairers");
+                  setShowFunctionHub(false);
+                }}
+              >
+                {t("manageUsers")}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                void loadRepairs("all", searchText, 1, sort, "active", true, {
+                  status: "READY_FOR_PICKUP",
+                  notified: true,
+                });
+                setAdminTab("none");
+                setShowFunctionHub(false);
+              }}
+            >
+              {t("homeReadyForPickup")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void loadRepairs("all", searchText, 1, sort, "active", true, {
+                  status: "NOTIFY_CUSTOMER",
+                });
+                setAdminTab("none");
+                setShowFunctionHub(false);
+              }}
+            >
+              {t("homeNotifyCustomer")}
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                disabled={busyActions.exportCsv}
+                onClick={() => void exportRepairsCsv()}
+              >
+                <FileDown size={14} /> {busyActions.exportCsv ? t("loadingExportCsv") : t("exportCsv")}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+      {!hideRepairWorkspace && (
       <section className="grid">
         <aside
           className={`card list ${isMobile && mobileView === "detail" ? "mobile-hidden" : ""}`}
@@ -1906,16 +2788,39 @@ function App() {
           <h2>
             {viewMode === "archived" ? t("archivedItems") : t("activeItems")} ({scope})
           </h2>
+          {activeFilterLabel() && (
+            <div className="active-filter-row">
+              <span className="status-chip ready">{t("filterActiveLabel", { value: activeFilterLabel() })}</span>
+              <button
+                type="button"
+                onClick={() => void loadRepairs(scope, searchText, 1, sort, viewMode, false, {})}
+              >
+                {t("clearFilter")}
+              </button>
+            </div>
+          )}
           <div className="search-bar">
             <input
               placeholder={`${t("search")}...`}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") void loadRepairs(scope, searchText, 1, sort, viewMode);
+                if (e.key === "Enter") void loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters);
               }}
             />
-            <button title={t("search")} onClick={() => void loadRepairs(scope, searchText, 1, sort, viewMode)}>
+            <button
+              type="button"
+              title={t("clearSearch")}
+              aria-label={t("clearSearch")}
+              disabled={!searchText.trim()}
+              onClick={() => {
+                setSearchText("");
+                void loadRepairs(scope, "", 1, sort, viewMode, false, listFilters);
+              }}
+            >
+              <X size={14} />
+            </button>
+            <button title={t("search")} onClick={() => void loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters)}>
               <Search size={14} />
             </button>
           </div>
@@ -1924,10 +2829,19 @@ function App() {
           <table className="repairs-table">
             <thead>
               <tr>
-                <th className="sortable" onClick={() => toggleSort("publicRef")}>{t("reference")}</th>
-                <th className="sortable" onClick={() => toggleSort("itemName")}>{t("product")}</th>
-                <th className="sortable" onClick={() => toggleSort("status")}>{t("status")}</th>
-                <th>{t("assigned")}</th>
+                <th className="sortable" onClick={() => toggleSort("repairNumber")}>
+                  {t("reference")}{sortIndicator("repairNumber")}
+                </th>
+                <th className="sortable" onClick={() => toggleSort("itemName")}>
+                  {t("product")}{sortIndicator("itemName")}
+                </th>
+                <th className="sortable" onClick={() => toggleSort("status")}>
+                  {t("status")}{sortIndicator("status")}
+                </th>
+                <th className="sortable" onClick={() => toggleSort("assigned")}>
+                  {t("assigned")}{sortIndicator("assigned")}
+                </th>
+                <th>{t("customerNotified")}</th>
               </tr>
             </thead>
             <tbody>
@@ -1941,6 +2855,16 @@ function App() {
                   <td>{repair.itemName ?? t("noProduct")}</td>
                   <td><span className={statusChipClass(repair.status)}>{formatStatus(repair.status, repair.notified ?? false)}</span></td>
                   <td>{repair.assignedToUser?.fullName ?? t("unassigned")}</td>
+                  <td className="notified-toggle-cell" onClick={(event) => event.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(repair.notified)}
+                      disabled={!canToggleCustomerNotified(repair)}
+                      title={t("customerNotified")}
+                      aria-label={t("customerNotified")}
+                      onChange={(event) => void setCustomerNotified(repair.id, event.target.checked)}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1948,14 +2872,14 @@ function App() {
           <div className="pagination">
             <button
               disabled={pagination.page <= 1}
-              onClick={() => void loadRepairs(scope, searchText, pagination.page - 1, sort, viewMode)}
+              onClick={() => void loadRepairs(scope, searchText, pagination.page - 1, sort, viewMode, false, listFilters)}
             >
               {t("prev")}
             </button>
             <span>{t("pageSummary", { page: pagination.page, totalPages: pagination.totalPages, total: pagination.total })}</span>
             <button
               disabled={pagination.page >= pagination.totalPages}
-              onClick={() => void loadRepairs(scope, searchText, pagination.page + 1, sort, viewMode)}
+              onClick={() => void loadRepairs(scope, searchText, pagination.page + 1, sort, viewMode, false, listFilters)}
             >
               {t("next")}
             </button>
@@ -1980,6 +2904,14 @@ function App() {
               <div className="detail-header-row">
                 <h2>{t("repairDetail")}</h2>
                 <div className="detail-header-actions">
+                  {canToggleLabelSimulation && (
+                    <button
+                      type="button"
+                      onClick={() => setShowThermalPreview((prev) => !prev)}
+                    >
+                      {showThermalPreview ? t("hideSimulationLabel") : t("showSimulationLabel")}
+                    </button>
+                  )}
                   {isAdmin && (
                     <button
                       className="button-danger"
@@ -1995,6 +2927,7 @@ function App() {
                 <span className="detail-chip"><strong>{t("reference")}:</strong> {formatRepairRef(selectedRepair)}</span>
                 <span className="detail-chip"><strong>{t("status")}:</strong> {formatStatus(selectedRepair.status, selectedRepair.notified ?? false)}</span>
                 <span className="detail-chip"><strong>{t("assigned")}:</strong> {selectedRepair.assignedToUser?.fullName ?? t("unassigned")}</span>
+                <span className="detail-chip"><strong>{t("customerNotified")}:</strong> {selectedRepair.notified ? t("yes") : t("no")}</span>
               </div>
 
               <section className="detail-section">
@@ -2008,78 +2941,92 @@ function App() {
                 </div>
                 <p className="section-hint">{intakeEditHint()}</p>
                 {isEditingRepairIntake ? (
-                  <div className="intake-edit-grid">
-                    <label>
-                      {t("articleType")}
-                      <select
-                        value={repairIntakeForm.productType}
-                        onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, productType: e.target.value }))}
-                      >
-                        <option value="">-</option>
-                        {ARTICLE_TYPE_OPTIONS.map((option) => (
-                          <option key={option} value={option}>{t(`articleTypeOption.${option}`)}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      {t("dateBroughtIn")}
-                      <input
-                        type="date"
-                        value={repairIntakeForm.createdDate}
-                        onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, createdDate: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      {t("customerFirstName")}
-                      <input
-                        value={repairIntakeForm.firstName}
-                        onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, firstName: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      {t("customerLastName")}
-                      <input
-                        value={repairIntakeForm.lastName}
-                        onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, lastName: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      {t("customerCity")}
-                      <input
-                        value={repairIntakeForm.city}
-                        onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, city: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      {t("customerEmail")}
-                      <input
-                        value={repairIntakeForm.email}
-                        onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, email: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      {t("customerPhone")}
-                      <input
-                        value={repairIntakeForm.phone}
-                        onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, phone: e.target.value }))}
-                      />
-                    </label>
-                    <label className="wide">
-                      {t("itemDescription")}
-                      <textarea
-                        rows={2}
-                        value={repairIntakeForm.itemName}
-                        onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, itemName: e.target.value }))}
-                      />
-                    </label>
-                    <label className="wide">
-                      {t("problem")}
-                      <textarea
-                        rows={3}
-                        value={repairIntakeForm.problemDescription}
-                        onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, problemDescription: e.target.value }))}
-                      />
-                    </label>
+                  <>
+                    <h4 className="intake-subsection-title">{t("sectionCustomerDetails")}</h4>
+                    <div className="intake-edit-grid">
+                      <label>
+                        {t("customerFirstName")}
+                        <input
+                          value={repairIntakeForm.firstName}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, firstName: e.target.value }))}
+                        />
+                      </label>
+                      <label>
+                        {t("customerLastName")}
+                        <input
+                          value={repairIntakeForm.lastName}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, lastName: e.target.value }))}
+                        />
+                      </label>
+                      <label className="wide">
+                        {t("customerStreetAddress")}
+                        <input
+                          value={repairIntakeForm.streetAddress}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, streetAddress: e.target.value }))}
+                        />
+                      </label>
+                      <label>
+                        {t("customerCity")}
+                        <input
+                          value={repairIntakeForm.city}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, city: e.target.value }))}
+                        />
+                      </label>
+                      <label>
+                        {t("customerEmail")}
+                        <input
+                          type="email"
+                          value={repairIntakeForm.email}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, email: e.target.value }))}
+                        />
+                      </label>
+                      <label>
+                        {t("customerPhone")}
+                        <input
+                          value={repairIntakeForm.phone}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, phone: e.target.value }))}
+                        />
+                      </label>
+                    </div>
+                    <h4 className="intake-subsection-title">{t("sectionRepairDetails")}</h4>
+                    <div className="intake-edit-grid">
+                      <label>
+                        {t("articleType")}
+                        <select
+                          value={repairIntakeForm.productType}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, productType: e.target.value }))}
+                        >
+                          <option value="">-</option>
+                          {ARTICLE_TYPE_OPTIONS.map((option) => (
+                            <option key={option} value={option}>{t(`articleTypeOption.${option}`)}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        {t("dateBroughtIn")}
+                        <input
+                          type="date"
+                          value={repairIntakeForm.createdDate}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, createdDate: e.target.value }))}
+                        />
+                      </label>
+                      <label className="wide">
+                        {t("itemDescription")}
+                        <textarea
+                          rows={2}
+                          value={repairIntakeForm.itemName}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, itemName: e.target.value }))}
+                        />
+                      </label>
+                      <label className="wide">
+                        {t("problem")}
+                        <textarea
+                          rows={3}
+                          value={repairIntakeForm.problemDescription}
+                          onChange={(e) => setRepairIntakeForm((prev) => ({ ...prev, problemDescription: e.target.value }))}
+                        />
+                      </label>
+                    </div>
                     <div className="repair-work-actions">
                       <button
                         disabled={busyActions.saveRepairIntake}
@@ -2087,19 +3034,40 @@ function App() {
                       >
                         {busyActions.saveRepairIntake ? t("loadingSaveCustomerIntake") : t("saveCustomerIntake")}
                       </button>
-                      <button type="button" onClick={() => setIsEditingRepairIntake(false)}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (intakeHasUnsavedChanges && !window.confirm(t("unsavedChangesConfirm"))) return;
+                          setIsEditingRepairIntake(false);
+                        }}
+                      >
                         {t("cancelEdit")}
                       </button>
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <dl className="detail-grid">
+                  <>
+                    <h4 className="intake-subsection-title">{t("sectionCustomerDetails")}</h4>
+                    <dl className="detail-grid">
+                      <div><dt>{t("fullName")}</dt><dd>{formatCustomerFullName(selectedRepair)}</dd></div>
+                      <div><dt>{t("customerStreetAddress")}</dt><dd>{selectedRepair.streetAddress ?? "-"}</dd></div>
+                      <div><dt>{t("customerCity")}</dt><dd>{selectedRepair.city ?? "-"}</dd></div>
+                      <div><dt>{t("customerEmail")}</dt><dd>{selectedRepair.email ?? "-"}</dd></div>
+                      <div>
+                        <dt>{t("customerPhone")}</dt>
+                        <dd>
+                          {(() => {
+                            const phoneHref = formatTelHref(selectedRepair.phone);
+                            if (!phoneHref || !selectedRepair.phone) return selectedRepair.phone ?? "-";
+                            return <a href={phoneHref}>{selectedRepair.phone}</a>;
+                          })()}
+                        </dd>
+                      </div>
+                    </dl>
+                    <h4 className="intake-subsection-title">{t("sectionRepairDetails")}</h4>
+                    <dl className="detail-grid">
                     <div><dt>{t("articleType")}</dt><dd>{formatArticleType(selectedRepair.productType)}</dd></div>
                     <div><dt>{t("dateBroughtIn")}</dt><dd>{formatDisplayDate(selectedRepair.createdDate)}</dd></div>
-                    <div><dt>{t("fullName")}</dt><dd>{formatCustomerFullName(selectedRepair)}</dd></div>
-                    <div><dt>{t("customerCity")}</dt><dd>{selectedRepair.city ?? "-"}</dd></div>
-                    <div><dt>{t("customerEmail")}</dt><dd>{selectedRepair.email ?? "-"}</dd></div>
-                    <div><dt>{t("customerPhone")}</dt><dd>{selectedRepair.phone ?? "-"}</dd></div>
                     <div className="wide">
                       <dt>{t("itemDescription")}</dt>
                       <dd>
@@ -2119,6 +3087,7 @@ function App() {
                       </dd>
                     </div>
                   </dl>
+                  </>
                 )}
               </section>
 
@@ -2141,14 +3110,14 @@ function App() {
                         onChange={(e) =>
                           setRepairWorkForm((prev) => ({
                             ...prev,
-                            status: e.target.value as "IN_PROGRESS" | "WAITING_PARTS" | "READY_FOR_PICKUP" | "CUSTOMER_NOTIFIED" | "COMPLETED" | "CANCELLED",
+                            status: e.target.value as "IN_PROGRESS" | "WAITING_PARTS" | "NOTIFY_CUSTOMER" | "READY_FOR_PICKUP" | "COMPLETED" | "CANCELLED",
                           }))
                         }
                       >
                         <option value="IN_PROGRESS">{t("statusInProgress")}</option>
                         <option value="WAITING_PARTS">{t("statusWaitingParts")}</option>
+                        <option value="NOTIFY_CUSTOMER">{t("statusNotifyCustomer")}</option>
                         <option value="READY_FOR_PICKUP">{t("statusReadyForPickup")}</option>
-                        <option value="CUSTOMER_NOTIFIED">{t("statusCustomerNotified")}</option>
                         <option value="COMPLETED">{t("statusCompleted")}</option>
                         <option value="CANCELLED">{t("statusCancelled")}</option>
                       </select>
@@ -2254,7 +3223,13 @@ function App() {
                       <button disabled={busyActions.saveRepairWork} onClick={() => void saveRepairWork(selectedRepair.id)}>
                         {busyActions.saveRepairWork ? t("loadingSaveRepairWork") : t("saveRepairWork")}
                       </button>
-                      <button type="button" onClick={() => setIsEditingRepairWork(false)}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (workHasUnsavedChanges && !window.confirm(t("unsavedChangesConfirm"))) return;
+                          setIsEditingRepairWork(false);
+                        }}
+                      >
                         {t("cancelEdit")}
                       </button>
                     </div>
@@ -2280,6 +3255,31 @@ function App() {
                     <div className="wide"><dt>{t("material")}</dt><dd>{renderExpandableValue("material", selectedRepair.material)}</dd></div>
                     <div className="wide"><dt>{t("remarks")}</dt><dd>{renderExpandableValue("technicianNotes", selectedRepair.technicianNotes)}</dd></div>
                   </dl>
+                )}
+              </section>
+
+              <section className="detail-section">
+                <h3>{t("repairChangeHistoryTitle")}</h3>
+                {isLoadingRepairHistory ? (
+                  <p>{t("loading")}</p>
+                ) : repairChangeHistory.length === 0 ? (
+                  <p className="field-help">{t("repairChangeHistoryEmpty")}</p>
+                ) : (
+                  <ul className="repair-history-list">
+                    {repairChangeHistory.map((entry) => (
+                      <li key={entry.id}>
+                        <strong>{formatChangeType(entry.changeType)}</strong>{" "}
+                        <span className="field-help">
+                          {formatDisplayDateTime(entry.createdAt)} - {(entry.changedBy?.fullName ?? entry.changedBy?.username ?? t("unknown"))}
+                        </span>
+                        {entry.changedFields.length > 0 && (
+                          <div className="field-help">
+                            {t("repairChangeFieldsLabel")}: {entry.changedFields.join(", ")}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </section>
 
@@ -2311,14 +3311,9 @@ function App() {
                     <Printer size={14} /> {busyActions.printLabel ? t("loadingPrintLabel") : t("printLabel")}
                   </button>
                 )}
-                {canToggleLabelSimulation && (
-                  <button
-                    type="button"
-                    onClick={() => setShowThermalPreview((prev) => !prev)}
-                  >
-                    {showThermalPreview ? t("hideSimulationLabel") : t("showSimulationLabel")}
-                  </button>
-                )}
+                <button type="button" onClick={() => printRepairA4(selectedRepair)}>
+                  <FileText size={14} /> {t("printA4")}
+                </button>
               </div>
 
               <div>
@@ -2353,6 +3348,7 @@ function App() {
           )}
         </section>
       </section>
+      )}
     </main>
   );
 }

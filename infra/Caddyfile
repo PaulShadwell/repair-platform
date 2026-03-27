@@ -1,0 +1,5 @@
+# Set SERVER_NAME in .env.production (e.g. repairs.example.ch).
+# Caddy obtains Let's Encrypt certificates automatically for real hostnames on ports 80/443.
+{$SERVER_NAME} {
+	reverse_proxy web:80
+}

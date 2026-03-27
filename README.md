@@ -12,7 +12,7 @@ Modern rewrite of the legacy RepairKafi PHP/SQLite system with:
 
 - `apps/api`: Express + TypeScript + Prisma + PostgreSQL
 - `apps/web`: React + TypeScript + Vite
-- `infra`: Docker Compose for PostgreSQL and MinIO
+- `infra`: Docker Compose for local PostgreSQL/MinIO; **production**: `infra/docker-compose.prod.yml` + Caddy (see `infra/README.production.md`)
 
 ## Quick Start
 

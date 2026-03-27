@@ -2,6 +2,7 @@ node_modules/
 apps/*/node_modules/
 apps/*/dist/
 apps/*/.env
+infra/.env.production
 apps/api/storage/
 *.log
 tools/print-agent/packages/

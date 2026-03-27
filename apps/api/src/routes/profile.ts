@@ -3,6 +3,7 @@ import path from "node:path";
 import bcrypt from "bcryptjs";
 import { Router } from "express";
 import multer from "multer";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -16,6 +17,7 @@ const upload = multer({
 
 const updateProfileSchema = z.object({
   fullName: z.string().min(2).max(120).optional(),
+  recoveryEmail: z.string().email().max(200).nullable().optional(),
   profilePhone: z.string().max(60).nullable().optional(),
   profileLocation: z.string().max(120).nullable().optional(),
   aboutMe: z.string().max(1000).nullable().optional(),
@@ -41,24 +43,85 @@ function getExtensionFromMimeType(mimeType: string): string {
   }
 }
 
+function isMissingRecoveryEmailColumn(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2022" &&
+    typeof error.message === "string" &&
+    error.message.includes("recoveryEmail")
+  );
+}
+
+function isMissingForcePasswordChangeColumn(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2022" &&
+    typeof error.message === "string" &&
+    error.message.includes("forcePasswordChange")
+  );
+}
+
 export const profileRouter = Router();
 
 profileRouter.use(requireAuth);
 
 profileRouter.get("/", async (req: AuthenticatedRequest, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.user!.id },
-    select: {
-      id: true,
-      username: true,
-      fullName: true,
-      profilePhone: true,
-      profileLocation: true,
-      aboutMe: true,
-      profileImageKey: true,
-      updatedAt: true,
-    },
-  });
+  let user:
+    | {
+        id: string;
+        username: string;
+        fullName: string;
+        recoveryEmail: string | null;
+        profilePhone: string | null;
+        profileLocation: string | null;
+        aboutMe: string | null;
+        profileImageKey: string | null;
+        updatedAt: Date;
+      }
+    | {
+        id: string;
+        username: string;
+        fullName: string;
+        profilePhone: string | null;
+        profileLocation: string | null;
+        aboutMe: string | null;
+        profileImageKey: string | null;
+        updatedAt: Date;
+      }
+    | null = null;
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        recoveryEmail: true,
+        profilePhone: true,
+        profileLocation: true,
+        aboutMe: true,
+        profileImageKey: true,
+        updatedAt: true,
+      },
+    });
+  } catch (error) {
+    if (!isMissingRecoveryEmailColumn(error)) {
+      throw error;
+    }
+    user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        profilePhone: true,
+        profileLocation: true,
+        aboutMe: true,
+        profileImageKey: true,
+        updatedAt: true,
+      },
+    });
+  }
   if (!user) {
     res.status(404).json({ message: "User not found" });
     return;
@@ -69,6 +132,7 @@ profileRouter.get("/", async (req: AuthenticatedRequest, res) => {
       id: user.id,
       username: user.username,
       fullName: user.fullName,
+      recoveryEmail: "recoveryEmail" in user ? user.recoveryEmail : null,
       profilePhone: user.profilePhone,
       profileLocation: user.profileLocation,
       aboutMe: user.aboutMe,
@@ -85,26 +149,72 @@ profileRouter.patch("/", async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  const updated = await prisma.user.update({
-    where: { id: req.user!.id },
-    data: parsed.data,
-    select: {
-      id: true,
-      username: true,
-      fullName: true,
-      profilePhone: true,
-      profileLocation: true,
-      aboutMe: true,
-      profileImageKey: true,
-      updatedAt: true,
-    },
-  });
+  let updated:
+    | {
+        id: string;
+        username: string;
+        fullName: string;
+        recoveryEmail: string | null;
+        profilePhone: string | null;
+        profileLocation: string | null;
+        aboutMe: string | null;
+        profileImageKey: string | null;
+        updatedAt: Date;
+      }
+    | {
+        id: string;
+        username: string;
+        fullName: string;
+        profilePhone: string | null;
+        profileLocation: string | null;
+        aboutMe: string | null;
+        profileImageKey: string | null;
+        updatedAt: Date;
+      };
+
+  try {
+    updated = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: parsed.data,
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        recoveryEmail: true,
+        profilePhone: true,
+        profileLocation: true,
+        aboutMe: true,
+        profileImageKey: true,
+        updatedAt: true,
+      },
+    });
+  } catch (error) {
+    if (!isMissingRecoveryEmailColumn(error)) {
+      throw error;
+    }
+    const { recoveryEmail: _ignoredRecoveryEmail, ...fallbackData } = parsed.data;
+    updated = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: fallbackData,
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        profilePhone: true,
+        profileLocation: true,
+        aboutMe: true,
+        profileImageKey: true,
+        updatedAt: true,
+      },
+    });
+  }
 
   res.json({
     profile: {
       id: updated.id,
       username: updated.username,
       fullName: updated.fullName,
+      recoveryEmail: "recoveryEmail" in updated ? updated.recoveryEmail : null,
       profilePhone: updated.profilePhone,
       profileLocation: updated.profileLocation,
       aboutMe: updated.aboutMe,
@@ -199,10 +309,20 @@ profileRouter.post("/change-password", async (req: AuthenticatedRequest, res) =>
   }
 
   const nextHash = await bcrypt.hash(parsed.data.newPassword, 12);
-  await prisma.user.update({
-    where: { id: req.user!.id },
-    data: { passwordHash: nextHash },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { passwordHash: nextHash, forcePasswordChange: false },
+    });
+  } catch (error) {
+    if (!isMissingForcePasswordChangeColumn(error)) {
+      throw error;
+    }
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { passwordHash: nextHash },
+    });
+  }
 
   res.json({ ok: true });
 });

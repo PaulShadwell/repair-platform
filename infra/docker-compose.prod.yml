@@ -1,0 +1,111 @@
+# Production stack: PostgreSQL + API + static web (nginx) + Caddy (HTTPS).
+# Run from the infra/ directory.
+#
+#   cp .env.production.example .env.production
+#   # edit .env.production — SERVER_NAME, passwords, PUBLIC_BASE_URL, CORS_ORIGIN
+#   docker compose -f docker-compose.prod.yml --env-file .env.production build
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d postgres
+#   docker compose -f docker-compose.prod.yml --env-file .env.production --profile migrate run --rm migrate
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# Point DNS for SERVER_NAME to this host before starting Caddy (for Let's Encrypt).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-repair_platform}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-repair_platform}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30d}
+      CORS_ORIGIN: ${CORS_ORIGIN:?Set CORS_ORIGIN in .env.production}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?Set PUBLIC_BASE_URL in .env.production}
+      PHOTO_STORAGE_DIR: /app/storage/photos
+      PRINT_SPOOL_DIR: /app/storage/print-spool
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      DEFAULT_PRINTER_MODE: ${DEFAULT_PRINTER_MODE:-spool}
+    volumes:
+      - api_storage:/app/storage
+    expose:
+      - "4000"
+    networks:
+      default:
+        aliases:
+          - repair-platform-api
+
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile.web
+      args:
+        VITE_API_BASE_URL: /api
+    restart: unless-stopped
+    depends_on:
+      - api
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SERVER_NAME: ${SERVER_NAME:?Set SERVER_NAME in .env.production}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile.api
+    profiles:
+      - migrate
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint:
+      - sh
+      - -c
+      - npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+    restart: "no"
+
+volumes:
+  postgres_data:
+  api_storage:
+  caddy_data:
+  caddy_config:
