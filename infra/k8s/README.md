@@ -7,7 +7,18 @@ This repo includes `.github/workflows/docker-publish.yml`. On every push to `mai
 - `ghcr.io/<owner>/repair-platform/api:latest` (and SHA tags)
 - `ghcr.io/<owner>/repair-platform/web:latest` (and SHA tags)
 
-You still need cluster access to roll out (below). Ensure **Actions** has permission to publish packages (repo **Settings → Actions → General → Workflow permissions**: read and write).
+You still need cluster access to roll out (below).
+
+### If the workflow fails with **403 Forbidden** pushing to GHCR
+
+1. **Repository → Settings → Actions → General → Workflow permissions**  
+   Set **Read and write permissions** (not read-only). Save. Without this, `GITHUB_TOKEN` cannot push packages.
+
+2. **Organization** (if the repo is under an org): org **Settings → Actions → General** may also restrict workflow permissions — allow read/write for workflows.
+
+3. **Optional fallback:** Create a [Personal Access Token (classic)](https://github.com/settings/tokens) with scopes **`write:packages`** and **`read:packages`**. Add it as a repository secret named **`GHCR_TOKEN`**. The workflow uses `GHCR_TOKEN` when set, otherwise `GITHUB_TOKEN`.
+
+4. **Package already exists elsewhere:** On GitHub → **Packages** → open the package → **Package settings** → **Manage Actions access** → ensure this repository has **Write** (or delete the orphaned package and let CI create a fresh one).
 
 After a green workflow run, point Kubernetes at `latest` or a specific SHA:
 

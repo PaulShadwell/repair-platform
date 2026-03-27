@@ -19,12 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # GITHUB_TOKEN needs repo "Workflow permissions" = Read and write (Settings → Actions → General).
+      # If push still returns 403, add repo secret GHCR_TOKEN (PAT with write:packages) — see infra/k8s/README.md.
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
