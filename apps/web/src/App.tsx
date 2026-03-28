@@ -2126,34 +2126,25 @@ function App() {
               <Home size={14} /> {t("home")}
             </button>
           )}
-          {showAdminTools && isAdmin && (
-            <button
-              className={adminTab === "customers" ? "active" : ""}
-              title={t("adminCustomers")}
-              onClick={() => {
-                setShowFunctionHub(false);
-                setAdminTab((prev) => (prev === "customers" ? "none" : "customers"));
-                closeMobileMenu();
-              }}
-            >
-              {t("adminCustomers")}
-            </button>
-          )}
           <button
+            className={adminTab === "none" && !showFunctionHub && viewMode === "active" && scope === "my" ? "active" : ""}
             title={t("myRepairs")}
             onClick={() => {
-              void loadRepairs("my", searchText, 1, sort, "active", true, {});
+              setAdminTab("none");
               setShowFunctionHub(false);
+              void loadRepairs("my", searchText, 1, sort, "active", true, {});
               closeMobileMenu();
             }}
           >
             {t("myRepairs")}
           </button>
           <button
+            className={adminTab === "none" && !showFunctionHub && viewMode === "active" && scope === "all" ? "active" : ""}
             title={t("allRepairs")}
             onClick={() => {
-              void loadRepairs("all", searchText, 1, sort, "active", true, {});
+              setAdminTab("none");
               setShowFunctionHub(false);
+              void loadRepairs("all", searchText, 1, sort, "active", true, {});
               closeMobileMenu();
             }}
           >
@@ -2161,50 +2152,52 @@ function App() {
           </button>
           {canViewArchivedItems && (
             <button
+              className={adminTab === "none" && !showFunctionHub && viewMode === "archived" ? "active" : ""}
               title={t("archivedItems")}
               onClick={() => {
-                void loadRepairs("all", searchText, 1, sort, "archived", true, {});
+                setAdminTab("none");
                 setShowFunctionHub(false);
+                void loadRepairs("all", searchText, 1, sort, "archived", true, {});
                 closeMobileMenu();
               }}
             >
               {t("archivedItems")}
             </button>
           )}
-          {showAdminTools && isAdmin && (
+          {isAdmin && (
             <button
               className={adminTab === "dashboard" ? "active" : ""}
               title={t("adminDashboard")}
               onClick={() => {
                 setShowFunctionHub(false);
-                setAdminTab((prev) => (prev === "dashboard" ? "none" : "dashboard"));
+                setAdminTab("dashboard");
                 closeMobileMenu();
               }}
             >
               {t("adminDashboard")}
             </button>
           )}
-          {showAdminTools && canCreateRepair && (
+          {canCreateRepair && (
             <button
               className={adminTab === "addRepair" ? "active" : ""}
               title={t("adminAddRepair")}
               onClick={() => {
                 setShowFunctionHub(false);
-                setAdminTab((prev) => (prev === "addRepair" ? "none" : "addRepair"));
+                setAdminTab("addRepair");
                 closeMobileMenu();
               }}
             >
               {t("adminAddRepair")}
             </button>
           )}
-          {showAdminTools && canManageUsers && (
+          {canManageUsers && (
             <>
               <button
                 className={adminTab === "addRepairer" ? "active" : ""}
                 title={t("addUser")}
                 onClick={() => {
                   setShowFunctionHub(false);
-                  setAdminTab((prev) => (prev === "addRepairer" ? "none" : "addRepairer"));
+                  setAdminTab("addRepairer");
                   closeMobileMenu();
                 }}
               >
@@ -2215,7 +2208,7 @@ function App() {
                 title={t("manageUsers")}
                 onClick={() => {
                   setShowFunctionHub(false);
-                  setAdminTab((prev) => (prev === "manageRepairers" ? "none" : "manageRepairers"));
+                  setAdminTab("manageRepairers");
                   closeMobileMenu();
                 }}
               >
@@ -2225,23 +2218,24 @@ function App() {
           )}
           {isAdmin && (
             <button
+              className={adminTab === "customers" ? "active" : ""}
+              title={t("adminCustomers")}
+              onClick={() => {
+                setShowFunctionHub(false);
+                setAdminTab("customers");
+                closeMobileMenu();
+              }}
+            >
+              {t("adminCustomers")}
+            </button>
+          )}
+          {isAdmin && (
+            <button
               title={t("exportCsv")}
               disabled={busyActions.exportCsv}
               onClick={() => void exportRepairsCsv()}
             >
               <FileDown size={14} /> {busyActions.exportCsv ? t("loadingExportCsv") : t("exportCsv")}
-            </button>
-          )}
-          {viewMode === "archived" && (
-            <button
-              title={t("activeItems")}
-              onClick={() => {
-                void loadRepairs("all", searchText, 1, sort, "active", true, {});
-                setShowFunctionHub(false);
-                closeMobileMenu();
-              }}
-            >
-              {t("activeItems")}
             </button>
           )}
         </div>
@@ -2371,7 +2365,7 @@ function App() {
           </div>
         </section>
       )}
-      {showAdminTools && adminTab !== "none" && (!showFunctionHub || !canUseFunctionHub) && (
+      {adminTab !== "none" && (!showFunctionHub || !canUseFunctionHub) && (
         <section className="card admin-tabs-container">
           {adminTab === "dashboard" && isAdmin && (
             <div className="admin-tab-content">
