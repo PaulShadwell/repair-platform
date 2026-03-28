@@ -310,6 +310,17 @@
   align-self: flex-end;
 }
 
+.admin-tab-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-tab-header h3 {
+  margin: 0;
+}
+
 .header-actions button,
 .search-bar button,
 .photo-card-actions button,

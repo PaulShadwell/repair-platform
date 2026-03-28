@@ -249,7 +249,7 @@ function App() {
   const canGeneratePairCode = Boolean(
     selectedPrinterProfileId && (selectedPrinterProfile?.canGeneratePairCode ?? canManagePrinters),
   );
-  const hideRepairWorkspace = showFunctionHub || adminTab === "addRepair" || adminTab === "customers";
+  const hideRepairWorkspace = showFunctionHub || adminTab !== "none";
   const addRepairHasUnsavedChanges =
     adminTab === "addRepair" &&
     Object.values(newRepair).some((value) => String(value).trim().length > 0);
@@ -2191,30 +2191,17 @@ function App() {
             </button>
           )}
           {canManageUsers && (
-            <>
-              <button
-                className={adminTab === "addRepairer" ? "active" : ""}
-                title={t("addUser")}
-                onClick={() => {
-                  setShowFunctionHub(false);
-                  setAdminTab("addRepairer");
-                  closeMobileMenu();
-                }}
-              >
-                {t("addUser")}
-              </button>
-              <button
-                className={adminTab === "manageRepairers" ? "active" : ""}
-                title={t("manageUsers")}
-                onClick={() => {
-                  setShowFunctionHub(false);
-                  setAdminTab("manageRepairers");
-                  closeMobileMenu();
-                }}
-              >
-                {t("manageUsers")}
-              </button>
-            </>
+            <button
+              className={adminTab === "manageRepairers" || adminTab === "addRepairer" ? "active" : ""}
+              title={t("manageUsers")}
+              onClick={() => {
+                setShowFunctionHub(false);
+                setAdminTab("manageRepairers");
+                closeMobileMenu();
+              }}
+            >
+              {t("manageUsers")}
+            </button>
           )}
           {isAdmin && (
             <button
@@ -2665,7 +2652,12 @@ function App() {
 
           {adminTab === "manageRepairers" && canManageUsers && (
             <div className="admin-tab-content">
-              <h3>{t("manageUsers")}</h3>
+              <div className="admin-tab-header">
+                <h3>{t("manageUsers")}</h3>
+                <button onClick={() => setAdminTab("addRepairer")}>
+                  {t("addUser")}
+                </button>
+              </div>
               <table className="repairs-table">
                 <thead>
                   <tr>
