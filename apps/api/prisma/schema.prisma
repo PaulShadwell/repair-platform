@@ -168,6 +168,7 @@ model RepairPhoto {
   originalFileName String
   mimeType         String
   checksum         String?
+  caption          String?
   createdByUserId  String?
   capturedAt       DateTime @default(now())
   repair           Repair   @relation(fields: [repairId], references: [id], onDelete: Cascade)

@@ -1108,6 +1108,29 @@ repairsRouter.get("/:id/photos/:photoId", async (req: AuthenticatedRequest, res)
   }
 });
 
+repairsRouter.patch("/:id/photos/:photoId", async (req: AuthenticatedRequest, res) => {
+  const repairId = String(req.params.id);
+  const photoId = String(req.params.photoId);
+  const photo = await prisma.repairPhoto.findFirst({
+    where: { id: photoId, repairId },
+  });
+  if (!photo) {
+    res.status(404).json({ message: "Photo not found" });
+    return;
+  }
+  const linkedRepair = await prisma.repair.findUnique({ where: { id: repairId } });
+  if (!linkedRepair || !canViewRepair(req, linkedRepair.assignedToUserId)) {
+    res.status(403).json({ message: "Forbidden" });
+    return;
+  }
+  const caption = typeof req.body?.caption === "string" ? req.body.caption.trim() : null;
+  const updated = await prisma.repairPhoto.update({
+    where: { id: photo.id },
+    data: { caption: caption || null },
+  });
+  res.json(updated);
+});
+
 repairsRouter.delete("/:id/photos/:photoId", async (req: AuthenticatedRequest, res) => {
   const repairId = String(req.params.id);
   const photoId = String(req.params.photoId);

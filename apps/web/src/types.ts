@@ -50,6 +50,7 @@ export type Repair = {
   photos: Array<{
     id: string;
     originalFileName: string;
+    caption: string | null;
   }>;
 };
 

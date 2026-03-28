@@ -339,7 +339,6 @@
 
 .header-actions button,
 .search-bar button,
-.photo-card-actions button,
 .detail button,
 .admin-panels button {
   display: inline-flex;
@@ -1121,45 +1120,25 @@
 .detail-header-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .detail-header-row h2 {
   margin: 0;
+  white-space: nowrap;
 }
 
 .detail-header-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.detail-actions-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.65rem;
-  align-items: flex-end;
-  margin: 0.85rem 0;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.detail-actions-bar.sticky {
-  position: sticky;
-  bottom: 0;
-  z-index: 4;
-  background: #fff;
-  padding: 0.55rem 0.5rem;
-  border-top: 1px solid #d8e1ec;
-  border-bottom: 1px solid #d8e1ec;
-  border-radius: 8px;
-}
-
-.detail-control {
-  margin: 0 !important;
-  display: flex !important;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 220px;
+.detail-assign-select {
+  min-width: 140px;
 }
 
 .button-danger {
@@ -1249,46 +1228,123 @@ button {
   font-size: 0.82rem;
 }
 
+.photos-section {
+  margin-top: 1.25rem;
+}
+
+.photos-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.photos-section-header h3 {
+  margin: 0;
+}
+
+.photo-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  border: 1px solid #b8c5d4;
+  border-radius: 6px;
+  background: #f4f7fb;
+  color: #1e3a5c;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.photo-upload-btn:hover {
+  background: #e8eef6;
+  border-color: #9eb2c8;
+}
+
 .photo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
 }
 
 .photo-card {
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 0.4rem;
-  background: #fafafa;
+  border: 1px solid #d8e1ec;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  color: inherit;
-  text-decoration: none;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+  transition: box-shadow 180ms ease, transform 180ms ease;
 }
 
-.photo-card img {
+.photo-card:hover {
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.photo-card-image {
+  position: relative;
+}
+
+.photo-card-image img {
+  display: block;
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  border-radius: 4px;
-  background: #f0f0f0;
+  background: #eef3f8;
 }
 
-.photo-card small {
-  font-size: 0.75rem;
-  color: #444;
-  word-break: break-word;
+.photo-card-image a {
+  display: block;
 }
 
-.photo-card-actions {
+.photo-delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  color: #8d2323;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease, background 150ms ease;
+  backdrop-filter: blur(4px);
 }
 
-.photo-card-actions button {
-  padding: 0.3rem 0.5rem;
-  font-size: 0.75rem;
+.photo-card:hover .photo-delete-btn {
+  opacity: 1;
+}
+
+.photo-delete-btn:hover {
+  background: #ffe8e8;
+}
+
+.photo-caption-input {
+  border: none;
+  border-top: 1px solid #eef1f5;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.82rem;
+  color: #3c5572;
+  background: transparent;
+  outline: none;
+}
+
+.photo-caption-input:focus {
+  background: #f8fafd;
+}
+
+.photo-caption-input::placeholder {
+  color: #a0b0c0;
 }
 
 .photo-loading {
@@ -1297,10 +1353,9 @@ button {
   justify-content: center;
   width: 100%;
   aspect-ratio: 4 / 3;
-  border-radius: 4px;
-  background: #f0f0f0;
-  color: #777;
-  font-size: 0.75rem;
+  background: #eef3f8;
+  color: #8899aa;
+  font-size: 0.8rem;
 }
 
 .thermal-modal-overlay {
@@ -1654,11 +1709,12 @@ button {
     border-color: #d6e3f2;
   }
 
-  .detail-actions-bar button,
-  .detail-actions-bar select,
-  .detail-actions-bar input[type="file"],
   .mobile-back-button,
-  .header-actions.mobile-actions button {
+  .header-actions.mobile-actions > button {
     min-height: 44px;
+  }
+
+  .detail-header-actions {
+    width: 100%;
   }
 }

@@ -3231,6 +3231,28 @@ function App() {
               <div className="detail-header-row">
                 <h2>{t("repairDetail")}</h2>
                 <div className="detail-header-actions">
+                  {assignees.length > 0 && canAssignRepairs && (
+                    <select
+                      className="detail-assign-select"
+                      defaultValue={selectedRepair.assignedToUserId ?? ""}
+                      onChange={(e) => void updateAssignment(selectedRepair.id, e.target.value)}
+                    >
+                      <option value="">{t("unassigned")}</option>
+                      {assignees.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {canPrintFromDetail && (
+                    <button disabled={busyActions.printLabel} onClick={() => void printLabel(selectedRepair.id)}>
+                      <Printer size={14} /> {busyActions.printLabel ? t("loadingPrintLabel") : t("printLabel")}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => printRepairA4(selectedRepair)}>
+                    <FileText size={14} /> {t("printA4")}
+                  </button>
                   {canToggleLabelSimulation && (
                     <button
                       type="button"
@@ -3610,64 +3632,58 @@ function App() {
                 )}
               </section>
 
-              <div className="detail-actions-bar sticky">
-                {assignees.length > 0 && canAssignRepairs && (
-                  <label className="detail-control">
-                    {t("assignTo")}
-                    <select
-                      defaultValue={selectedRepair.assignedToUserId ?? ""}
-                      onChange={(e) => void updateAssignment(selectedRepair.id, e.target.value)}
-                    >
-                      <option value="">{t("unassigned")}</option>
-                      {assignees.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.fullName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                {canManagePhotos && (
-                  <label className="detail-control">
-                    {t("addPhotos")}
-                    <input type="file" multiple accept="image/*" onChange={(e) => void uploadPhotos(selectedRepair.id, e.target.files)} />
-                  </label>
-                )}
-                {canPrintFromDetail && (
-                  <button disabled={busyActions.printLabel} onClick={() => void printLabel(selectedRepair.id)}>
-                    <Printer size={14} /> {busyActions.printLabel ? t("loadingPrintLabel") : t("printLabel")}
-                  </button>
-                )}
-                <button type="button" onClick={() => printRepairA4(selectedRepair)}>
-                  <FileText size={14} /> {t("printA4")}
-                </button>
-              </div>
-
-              <div>
-                <h3>{t("photos")} ({selectedRepair.photos.length})</h3>
-                <div className="photo-grid">
-                  {selectedRepair.photos.map((photo) => (
-                    <div key={photo.id} className="photo-card">
-                      {photoPreviewUrls[photo.id] ? (
-                        <a href={photoPreviewUrls[photo.id]} target="_blank" rel="noreferrer">
-                          <img src={photoPreviewUrls[photo.id]} alt={photo.originalFileName} />
-                        </a>
-                      ) : (
-                        <span className="photo-loading">Loading preview...</span>
-                      )}
-                      <small>{photo.originalFileName}</small>
-                      <div className="photo-card-actions">
-                        <button
-                          type="button"
-                          onClick={() => void removePhoto(selectedRepair.id, photo.id)}
-                        >
-                          <Trash2 size={12} /> 
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+              <section className="photos-section">
+                <div className="photos-section-header">
+                  <h3>{t("photos")} ({selectedRepair.photos.length})</h3>
+                  {canManagePhotos && (
+                    <label className="photo-upload-btn">
+                      <Plus size={14} /> {t("addPhotos")}
+                      <input type="file" multiple accept="image/*" onChange={(e) => void uploadPhotos(selectedRepair.id, e.target.files)} hidden />
+                    </label>
+                  )}
                 </div>
-              </div>
+                {selectedRepair.photos.length === 0 ? (
+                  <p className="field-help">{t("noPhotos")}</p>
+                ) : (
+                  <div className="photo-grid">
+                    {selectedRepair.photos.map((photo) => (
+                      <div key={photo.id} className="photo-card">
+                        <div className="photo-card-image">
+                          {photoPreviewUrls[photo.id] ? (
+                            <a href={photoPreviewUrls[photo.id]} target="_blank" rel="noreferrer">
+                              <img src={photoPreviewUrls[photo.id]} alt={photo.caption || ""} />
+                            </a>
+                          ) : (
+                            <span className="photo-loading">{t("loading")}</span>
+                          )}
+                          {canManagePhotos && (
+                            <button
+                              type="button"
+                              className="photo-delete-btn"
+                              title={t("delete")}
+                              onClick={() => void removePhoto(selectedRepair.id, photo.id)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          className="photo-caption-input"
+                          placeholder={t("photoCaption")}
+                          defaultValue={photo.caption ?? ""}
+                          onBlur={(e) => {
+                            const val = e.target.value.trim();
+                            if (val !== (photo.caption ?? "")) {
+                              void api.patch(`/repairs/${selectedRepair.id}/photos/${photo.id}`, { caption: val });
+                            }
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
               {showThermalPreview && <ThermalLabelPreview repair={selectedRepair} onClose={() => setShowThermalPreview(false)} />}
             </>
           ) : (
