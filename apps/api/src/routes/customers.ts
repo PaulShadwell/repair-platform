@@ -75,6 +75,96 @@ customersRouter.get("/", async (req: AuthenticatedRequest, res) => {
   });
 });
 
+customersRouter.post("/backfill", async (req: AuthenticatedRequest, res) => {
+  if (!isAdmin(req.user!.roles)) {
+    res.status(403).json({ message: "Only admins can run backfill" });
+    return;
+  }
+
+  const unlinked = await prisma.repair.findMany({
+    where: { customerId: null },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      streetAddress: true,
+      city: true,
+      postcode: true,
+    },
+  });
+
+  if (unlinked.length === 0) {
+    res.json({ created: 0, linked: 0 });
+    return;
+  }
+
+  let created = 0;
+  let linked = 0;
+
+  for (const repair of unlinked) {
+    const email = repair.email?.trim().toLowerCase() || null;
+    const phone = repair.phone?.trim() || null;
+    const firstName = repair.firstName?.trim() || null;
+    const lastName = repair.lastName?.trim() || null;
+
+    if (!email && !phone && !(firstName && lastName)) continue;
+
+    let customer: { id: string } | null = null;
+
+    if (email) {
+      customer = await prisma.customer.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
+        select: { id: true },
+      });
+    }
+
+    if (!customer && phone && phone.replace(/\D/g, "").length >= 6) {
+      customer = await prisma.customer.findFirst({
+        where: { phone: { contains: phone } },
+        select: { id: true },
+      });
+    }
+
+    if (!customer && firstName && lastName) {
+      customer = await prisma.customer.findFirst({
+        where: {
+          AND: [
+            { firstName: { equals: firstName, mode: "insensitive" } },
+            { lastName: { equals: lastName, mode: "insensitive" } },
+          ],
+        },
+        select: { id: true },
+      });
+    }
+
+    if (!customer) {
+      customer = await prisma.customer.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          phone,
+          streetAddress: repair.streetAddress?.trim() || null,
+          city: repair.city?.trim() || null,
+          postcode: repair.postcode?.trim() || null,
+        },
+        select: { id: true },
+      });
+      created++;
+    }
+
+    await prisma.repair.update({
+      where: { id: repair.id },
+      data: { customerId: customer.id },
+    });
+    linked++;
+  }
+
+  res.json({ created, linked });
+});
+
 const mergeSchema = z.object({
   keepId: z.string().uuid(),
   mergeIds: z.array(z.string().uuid()).min(1),

@@ -1476,6 +1476,16 @@ function App() {
     }
   }
 
+  async function backfillCustomers(): Promise<void> {
+    try {
+      const response = await api.post<{ created: number; linked: number }>("/customers/backfill");
+      showToast(t("backfillDone", { created: response.data.created, linked: response.data.linked }));
+      void loadCustomerList(customerListSearch, 1);
+    } catch {
+      showToast(t("backfillFailed"), "error");
+    }
+  }
+
   async function mergeCustomers(): Promise<void> {
     const ids = Array.from(customerMergeSelection);
     if (ids.length < 2) {
@@ -2731,6 +2741,14 @@ function App() {
           {adminTab === "customers" && isAdmin && (
             <div className="admin-tab-content">
               <h3>{t("adminCustomers")}</h3>
+              {customerListTotal === 0 && !isLoadingCustomerList && !customerListSearch && (
+                <div className="detail-section">
+                  <p className="field-help">{t("backfillHint")}</p>
+                  <button onClick={() => void backfillCustomers()}>
+                    {t("backfillCustomers")}
+                  </button>
+                </div>
+              )}
               <div className="customer-list-toolbar">
                 <input
                   type="search"
