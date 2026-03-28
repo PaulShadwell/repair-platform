@@ -14,6 +14,7 @@ import { dashboardRouter } from "./routes/dashboard.js";
 import { printAgentRouter } from "./routes/printAgent.js";
 import { profileRouter } from "./routes/profile.js";
 import { customersRouter } from "./routes/customers.js";
+import { brandingRouter } from "./routes/branding.js";
 import { ensureStoragePaths } from "./services/storage.js";
 
 const app = express();
@@ -35,6 +36,7 @@ app.use("/api/print-agent", printAgentRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/customers", customersRouter);
+app.use("/api/branding", brandingRouter);
 app.use(errorHandler);
 
 async function ensureBootstrapData(): Promise<void> {

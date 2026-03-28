@@ -281,6 +281,12 @@ model PrinterPairingCode {
   @@index([printerProfileId, expiresAt])
 }
 
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model PasswordResetToken {
   id            String   @id @default(uuid())
   userId        String

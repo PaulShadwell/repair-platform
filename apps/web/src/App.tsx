@@ -27,7 +27,8 @@ const ARTICLE_TYPE_OPTIONS = [
   "Wood",
   "Other",
 ] as const;
-const APP_LOGO_SRC = "/repair-kafi-logo-v3.png";
+const DEFAULT_LOGO_SRC = "/repair-kafi-logo-v3.png";
+const DEFAULT_APP_NAME = "Repair Platform";
 
 function dateInputTodayLocal(): string {
   const d = new Date();
@@ -206,6 +207,10 @@ function App() {
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
   const [customerMergeSelection, setCustomerMergeSelection] = useState<Set<string>>(new Set());
   const [isMergingCustomers, setIsMergingCustomers] = useState<boolean>(false);
+  const [brandAppName, setBrandAppName] = useState<string>(DEFAULT_APP_NAME);
+  const [brandLogoSrc, setBrandLogoSrc] = useState<string>(DEFAULT_LOGO_SRC);
+  const [brandingDraft, setBrandingDraft] = useState({ appName: "" });
+  const [brandLogoFile, setBrandLogoFile] = useState<File | null>(null);
   const [busyActions, setBusyActions] = useState<Record<BusyAction, boolean>>({
     createRepair: false,
     createUser: false,
@@ -346,6 +351,13 @@ function App() {
         accountMenuCloseTimeoutRef.current = null;
       }
     };
+  }, []);
+
+  useEffect(() => {
+    api.get<Record<string, string>>("/branding").then((res) => {
+      if (res.data.appName) setBrandAppName(res.data.appName);
+      if (res.data.logoKey) setBrandLogoSrc(`${api.defaults.baseURL}/branding/logo?_=${Date.now()}`);
+    }).catch(() => { /* keep defaults */ });
   }, []);
 
   useEffect(() => {
@@ -1486,6 +1498,39 @@ function App() {
     }
   }
 
+  async function saveBranding(): Promise<void> {
+    try {
+      if (brandLogoFile) {
+        const arrayBuf = await brandLogoFile.arrayBuffer();
+        await api.post("/branding/logo", arrayBuf, {
+          headers: { "Content-Type": brandLogoFile.type },
+        });
+        setBrandLogoSrc(`${api.defaults.baseURL}/branding/logo?_=${Date.now()}`);
+        setBrandLogoFile(null);
+      }
+      if (brandingDraft.appName.trim()) {
+        const res = await api.put<Record<string, string>>("/branding", {
+          appName: brandingDraft.appName.trim(),
+        });
+        if (res.data.appName) setBrandAppName(res.data.appName);
+      }
+      showToast(t("brandingSaved"), "success");
+    } catch {
+      showToast(t("brandingSaveFailed"), "error");
+    }
+  }
+
+  async function deleteBrandLogo(): Promise<void> {
+    try {
+      await api.delete("/branding/logo");
+      setBrandLogoSrc(DEFAULT_LOGO_SRC);
+      setBrandLogoFile(null);
+      showToast(t("brandingLogoRemoved"), "success");
+    } catch {
+      showToast(t("brandingSaveFailed"), "error");
+    }
+  }
+
   async function mergeCustomers(): Promise<void> {
     const ids = Array.from(customerMergeSelection);
     if (ids.length < 2) {
@@ -1569,7 +1614,7 @@ function App() {
           `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(String(value))}</td></tr>`,
       )
       .join("");
-    const logoUrl = `${window.location.origin}${APP_LOGO_SRC}`;
+    const logoUrl = brandLogoSrc.startsWith("http") ? brandLogoSrc : `${window.location.origin}${brandLogoSrc}`;
 
     printWindow.document.write(`<!doctype html>
 <html>
@@ -1843,8 +1888,8 @@ function App() {
           }}
         >
           <header className="login-card-header">
-            <img className="login-brand-logo" src={APP_LOGO_SRC} alt="Repair Kafi logo" />
-            <h1>{t("appTitle")}</h1>
+            <img className="login-brand-logo" src={brandLogoSrc} alt="" />
+            <h1>{brandAppName}</h1>
             <p>{t("login")}</p>
           </header>
 
@@ -1955,7 +2000,7 @@ function App() {
       <main className="container login-screen">
         <section className="card login-card">
           <header className="login-card-header">
-            <img className="login-brand-logo" src={APP_LOGO_SRC} alt="Repair Kafi logo" />
+            <img className="login-brand-logo" src={brandLogoSrc} alt="" />
             <h1>{t("forcePasswordChangeTitle")}</h1>
             <p>{t("forcePasswordChangeHelp")}</p>
           </header>
@@ -2016,8 +2061,8 @@ function App() {
       <header className="header">
         <div className="header-top">
           <div className="header-brand">
-            <img className="header-brand-logo" src={APP_LOGO_SRC} alt="Repair Kafi logo" />
-            <h1>{t("appTitle")}</h1>
+            <img className="header-brand-logo" src={brandLogoSrc} alt="" />
+            <h1>{brandAppName}</h1>
           </div>
           <button
             type="button"
@@ -2859,6 +2904,46 @@ function App() {
                 <h3>{t("settings")}</h3>
                 <button type="button" onClick={() => setAdminTab("none")}>{t("close")}</button>
               </div>
+              {isAdmin && (
+                <div className="add-repair-section">
+                  <h4 className="add-repair-section-title">{t("brandingSection")}</h4>
+                  <div className="profile-grid">
+                    <label>
+                      {t("brandingAppName")}
+                      <input
+                        type="text"
+                        placeholder={brandAppName}
+                        value={brandingDraft.appName}
+                        onChange={(e) => setBrandingDraft({ ...brandingDraft, appName: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      {t("brandingLogo")}
+                      <div className="branding-logo-row">
+                        {brandLogoSrc !== DEFAULT_LOGO_SRC && (
+                          <img className="branding-logo-preview" src={brandLogoSrc} alt="" />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
+                          onChange={(e) => setBrandLogoFile(e.target.files?.[0] ?? null)}
+                        />
+                      </div>
+                    </label>
+                  </div>
+                  <div className="add-repair-actions">
+                    <button onClick={() => void saveBranding()}>
+                      {t("brandingSave")}
+                    </button>
+                    {brandLogoSrc !== DEFAULT_LOGO_SRC && (
+                      <button className="clear-linked-customer-btn" onClick={() => void deleteBrandLogo()}>
+                        {t("brandingRemoveLogo")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              <h4 className="add-repair-section-title">{t("printerSection")}</h4>
               <div className="profile-grid">
                 <label>
                   {t("printerProfile")}
