@@ -28,7 +28,7 @@ customersRouter.get("/", async (req: AuthenticatedRequest, res) => {
 
   const { search, page, pageSize } = parsed.data;
 
-  const where = search.length >= 2
+  const where = search.length > 0
     ? {
         OR: [
           { firstName: { contains: search, mode: "insensitive" as const } },

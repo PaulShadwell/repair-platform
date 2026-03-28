@@ -249,7 +249,7 @@ function App() {
   const canGeneratePairCode = Boolean(
     selectedPrinterProfileId && (selectedPrinterProfile?.canGeneratePairCode ?? canManagePrinters),
   );
-  const hideRepairWorkspace = showFunctionHub || adminTab === "addRepair";
+  const hideRepairWorkspace = showFunctionHub || adminTab === "addRepair" || adminTab === "customers";
   const addRepairHasUnsavedChanges =
     adminTab === "addRepair" &&
     Object.values(newRepair).some((value) => String(value).trim().length > 0);
@@ -616,10 +616,12 @@ function App() {
   }, [adminTab, newRepair.firstName, newRepair.lastName, newRepair.email, newRepair.phone]);
 
   useEffect(() => {
-    if (adminTab === "customers") {
+    if (adminTab !== "customers") return;
+    const timeoutId = window.setTimeout(() => {
       void loadCustomerList(customerListSearch, 1);
-    }
-  }, [adminTab]);
+    }, customerListSearch ? 300 : 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [adminTab, customerListSearch]);
 
   useEffect(() => {
     if (!selectedRepair) {
@@ -2734,10 +2736,7 @@ function App() {
                   type="search"
                   placeholder={t("search")}
                   value={customerListSearch}
-                  onChange={(e) => {
-                    setCustomerListSearch(e.target.value);
-                    void loadCustomerList(e.target.value, 1);
-                  }}
+                  onChange={(e) => setCustomerListSearch(e.target.value)}
                 />
                 <span className="field-help">{t("customerListTotal", { count: customerListTotal })}</span>
                 {customerMergeSelection.size >= 2 && (
