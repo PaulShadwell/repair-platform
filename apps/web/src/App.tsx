@@ -3668,7 +3668,7 @@ function App() {
                   ))}
                 </div>
               </div>
-              {showThermalPreview && <ThermalLabelPreview repair={selectedRepair} />}
+              {showThermalPreview && <ThermalLabelPreview repair={selectedRepair} onClose={() => setShowThermalPreview(false)} />}
             </>
           ) : (
             <p>{t("selectRepairPrompt")}</p>

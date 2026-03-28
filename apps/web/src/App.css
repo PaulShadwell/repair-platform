@@ -1303,6 +1303,59 @@ button {
   font-size: 0.75rem;
 }
 
+.thermal-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.thermal-modal {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.22);
+  padding: 1.25rem;
+  max-height: 92vh;
+  overflow-y: auto;
+  width: fit-content;
+  max-width: 96vw;
+}
+
+.thermal-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.thermal-modal-header h3 {
+  margin: 0;
+}
+
+.thermal-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #4f5f75;
+  cursor: pointer;
+}
+
+.thermal-modal-close:hover {
+  background: #eef3f9;
+  color: #1e3a5c;
+}
+
 .preview-note {
   margin: 0.25rem 0 0.75rem;
   color: #666;
@@ -1404,6 +1457,7 @@ button {
   .header,
   .list,
   .message,
+  body > *:not(.thermal-modal-overlay),
   .account-drawer-overlay,
   .account-drawer,
   .admin-tabs-container,
@@ -1414,30 +1468,23 @@ button {
   .grid-resizer,
   .preview-note,
   .preview-actions,
-  .detail > :not(.thermal-preview-section) {
+  .thermal-modal-header,
+  .thermal-modal-close {
     display: none !important;
   }
 
-  .container,
-  .grid,
-  .card,
-  .detail {
-    margin: 0 !important;
+  .thermal-modal-overlay {
+    position: static !important;
+    background: none !important;
     padding: 0 !important;
-    border: 0 !important;
+  }
+
+  .thermal-modal {
     box-shadow: none !important;
-    background: #fff !important;
-  }
-
-  .thermal-preview-section {
-    padding-top: 2mm;
-    padding-bottom: 2mm;
-  }
-
-  .thermal-preview-section h3 {
-    margin: 0 0 2mm;
-    font-size: 11px;
-    font-weight: 700;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .thermal-preview {
