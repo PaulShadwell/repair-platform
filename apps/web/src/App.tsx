@@ -448,7 +448,7 @@ function App() {
     if (adminTab === "addRepair" && !canCreateRepair) {
       setAdminTab("none");
     }
-    if (adminTab === "customers" && !isAdmin) {
+    if (adminTab === "customers" && !canCreateRepair) {
       setAdminTab("none");
     }
     if (adminTab === "settings" && !showAdminTools) {
@@ -2248,7 +2248,7 @@ function App() {
               {t("manageUsers")}
             </button>
           )}
-          {isAdmin && (
+          {canCreateRepair && (
             <button
               className={adminTab === "customers" ? "active" : ""}
               title={t("adminCustomers")}
@@ -2769,10 +2769,10 @@ function App() {
             </div>
           )}
 
-          {adminTab === "customers" && isAdmin && (
+          {adminTab === "customers" && canCreateRepair && (
             <div className="admin-tab-content">
               <h3>{t("adminCustomers")}</h3>
-              {customerListTotal === 0 && !isLoadingCustomerList && !customerListSearch && (
+              {isAdmin && customerListTotal === 0 && !isLoadingCustomerList && !customerListSearch && (
                 <div className="detail-section">
                   <p className="field-help">{t("backfillHint")}</p>
                   <button onClick={() => void backfillCustomers()}>
@@ -2788,7 +2788,7 @@ function App() {
                   onChange={(e) => setCustomerListSearch(e.target.value)}
                 />
                 <span className="field-help">{t("customerListTotal", { count: customerListTotal })}</span>
-                {customerMergeSelection.size >= 2 && (
+                {isAdmin && customerMergeSelection.size >= 2 && (
                   <button
                     disabled={isMergingCustomers}
                     onClick={() => void mergeCustomers()}
@@ -2796,7 +2796,7 @@ function App() {
                     {isMergingCustomers ? t("loading") : t("mergeSelected", { count: customerMergeSelection.size })}
                   </button>
                 )}
-                {customerMergeSelection.size > 0 && (
+                {isAdmin && customerMergeSelection.size > 0 && (
                   <button
                     type="button"
                     className="clear-linked-customer-btn"
@@ -2815,7 +2815,7 @@ function App() {
                   <table className="repairs-table customer-list-table">
                     <thead>
                       <tr>
-                        <th className="customer-merge-col"></th>
+                        {isAdmin && <th className="customer-merge-col"></th>}
                         <th>{t("fullName")}</th>
                         <th>{t("customerEmail")}</th>
                         <th>{t("customerPhone")}</th>
@@ -2833,20 +2833,22 @@ function App() {
                             key={cust.id}
                             className={`customer-list-row ${isExpanded ? "expanded" : ""} ${isSelected ? "selected" : ""}`}
                           >
-                            <td className="customer-merge-col">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => {
-                                  setCustomerMergeSelection((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(cust.id)) next.delete(cust.id);
-                                    else next.add(cust.id);
-                                    return next;
-                                  });
-                                }}
-                              />
-                            </td>
+                            {isAdmin && (
+                              <td className="customer-merge-col">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    setCustomerMergeSelection((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(cust.id)) next.delete(cust.id);
+                                      else next.add(cust.id);
+                                      return next;
+                                    });
+                                  }}
+                                />
+                              </td>
+                            )}
                             <td>
                               <button
                                 type="button"
