@@ -346,8 +346,15 @@
   grid-column: span 2;
 }
 
-.add-repair-submit {
+.add-repair-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
   margin-top: 0.35rem;
+}
+
+.add-repair-submit {
+  margin-top: 0;
 }
 
 .add-repair-section {
@@ -834,6 +841,72 @@
   border-radius: 999px;
   padding: 0.3rem 0.65rem;
   font-size: 0.82rem;
+}
+
+.customer-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.customer-list-toolbar input[type="search"] {
+  min-width: 180px;
+  max-width: 280px;
+}
+
+.customer-list-table {
+  font-size: 0.9rem;
+}
+
+.customer-merge-col {
+  width: 2rem;
+  text-align: center;
+}
+
+.customer-list-row.selected {
+  background: #eef5ff;
+}
+
+.customer-list-row.expanded {
+  background: #fafcff;
+}
+
+.customer-expand-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #1e3a5c;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.customer-expand-btn:hover {
+  color: #12294a;
+}
+
+.customer-repairs-sublist {
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.85rem;
+  list-style: disc;
+  color: #4a5568;
+}
+
+.customer-repairs-sublist li {
+  padding: 0.15rem 0;
+}
+
+.pagination-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.8rem;
+  font-size: 0.9rem;
 }
 
 .customer-history-list,

@@ -51,7 +51,7 @@ type BusyAction =
   | "exportCsv";
 
 function App() {
-  const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "settings">(
+  const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings">(
     "none",
   );
   const { t, i18n } = useTranslation();
@@ -180,6 +180,32 @@ function App() {
   const [hasQueriedCustomerHistory, setHasQueriedCustomerHistory] = useState<boolean>(false);
   const [repairChangeHistory, setRepairChangeHistory] = useState<RepairChangeHistoryEntry[]>([]);
   const [isLoadingRepairHistory, setIsLoadingRepairHistory] = useState<boolean>(false);
+  type CustomerListItem = {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    phone: string | null;
+    streetAddress: string | null;
+    city: string | null;
+    repairs: Array<{
+      id: string;
+      publicRef: string;
+      repairNumber: number | null;
+      status: string;
+      itemName: string | null;
+      createdDate: string | null;
+      notified: boolean | null;
+    }>;
+  };
+  const [customerList, setCustomerList] = useState<CustomerListItem[]>([]);
+  const [customerListTotal, setCustomerListTotal] = useState<number>(0);
+  const [customerListPage, setCustomerListPage] = useState<number>(1);
+  const [customerListSearch, setCustomerListSearch] = useState<string>("");
+  const [isLoadingCustomerList, setIsLoadingCustomerList] = useState<boolean>(false);
+  const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
+  const [customerMergeSelection, setCustomerMergeSelection] = useState<Set<string>>(new Set());
+  const [isMergingCustomers, setIsMergingCustomers] = useState<boolean>(false);
   const [busyActions, setBusyActions] = useState<Record<BusyAction, boolean>>({
     createRepair: false,
     createUser: false,
@@ -410,6 +436,9 @@ function App() {
     if (adminTab === "addRepair" && !canCreateRepair) {
       setAdminTab("none");
     }
+    if (adminTab === "customers" && !isAdmin) {
+      setAdminTab("none");
+    }
     if (adminTab === "settings" && !showAdminTools) {
       setAdminTab("none");
     }
@@ -585,6 +614,12 @@ function App() {
       window.clearTimeout(timeoutId);
     };
   }, [adminTab, newRepair.firstName, newRepair.lastName, newRepair.email, newRepair.phone]);
+
+  useEffect(() => {
+    if (adminTab === "customers") {
+      void loadCustomerList(customerListSearch, 1);
+    }
+  }, [adminTab]);
 
   useEffect(() => {
     if (!selectedRepair) {
@@ -1421,6 +1456,45 @@ function App() {
     await i18n.changeLanguage(lang);
   }
 
+  async function loadCustomerList(search: string, page: number): Promise<void> {
+    setIsLoadingCustomerList(true);
+    try {
+      const response = await api.get<{
+        customers: CustomerListItem[];
+        pagination: { total: number; page: number; totalPages: number };
+      }>("/customers", { params: { search, page, pageSize: 25 } });
+      setCustomerList(response.data.customers);
+      setCustomerListTotal(response.data.pagination.total);
+      setCustomerListPage(response.data.pagination.page);
+    } catch {
+      setCustomerList([]);
+      setCustomerListTotal(0);
+    } finally {
+      setIsLoadingCustomerList(false);
+    }
+  }
+
+  async function mergeCustomers(): Promise<void> {
+    const ids = Array.from(customerMergeSelection);
+    if (ids.length < 2) {
+      showToast(t("mergeNeedsTwoOrMore"), "error");
+      return;
+    }
+    const keepId = ids[0];
+    const mergeIds = ids.slice(1);
+    setIsMergingCustomers(true);
+    try {
+      await api.post("/customers/merge", { keepId, mergeIds });
+      showToast(t("mergeSuccess"));
+      setCustomerMergeSelection(new Set());
+      void loadCustomerList(customerListSearch, customerListPage);
+    } catch {
+      showToast(t("mergeFailed"), "error");
+    } finally {
+      setIsMergingCustomers(false);
+    }
+  }
+
   async function exportRepairsCsv(): Promise<void> {
     if (!isAdmin) return;
     setBusy("exportCsv", true);
@@ -1680,6 +1754,25 @@ function App() {
   function clearLinkedCustomer(): void {
     setNewRepair((prev) => ({ ...prev, customerId: "" }));
     showToast(t("clearLinkedCustomerDone"), "success");
+  }
+
+  function resetNewRepairForm(): void {
+    setNewRepair({
+      productType: "",
+      createdDate: dateInputTodayLocal(),
+      firstName: "",
+      lastName: "",
+      city: "",
+      streetAddress: "",
+      email: "",
+      phone: "",
+      itemName: "",
+      problemDescription: "",
+      assignedToUserId: "",
+      customerId: "",
+    });
+    setCustomerHistoryMatches([]);
+    setHasQueriedCustomerHistory(false);
   }
 
   function formatArticleType(value: string | null | undefined): string {
@@ -2105,6 +2198,19 @@ function App() {
               </button>
             </>
           )}
+          {showAdminTools && isAdmin && (
+            <button
+              className={adminTab === "customers" ? "active" : ""}
+              title={t("adminCustomers")}
+              onClick={() => {
+                setShowFunctionHub(false);
+                setAdminTab((prev) => (prev === "customers" ? "none" : "customers"));
+                closeMobileMenu();
+              }}
+            >
+              {t("adminCustomers")}
+            </button>
+          )}
           {isAdmin && (
             <button
               title={t("exportCsv")}
@@ -2466,13 +2572,22 @@ function App() {
                   )}
                 </div>
               </div>
-              <button
-                className="add-repair-submit"
-                disabled={busyActions.createRepair}
-                onClick={() => void createRepair()}
-              >
-                <Plus size={14} /> {busyActions.createRepair ? t("loadingCreateRepair") : t("createRepair")}
-              </button>
+              <div className="add-repair-actions">
+                <button
+                  className="add-repair-submit"
+                  disabled={busyActions.createRepair}
+                  onClick={() => void createRepair()}
+                >
+                  <Plus size={14} /> {busyActions.createRepair ? t("loadingCreateRepair") : t("createRepair")}
+                </button>
+                <button
+                  type="button"
+                  className="clear-linked-customer-btn"
+                  onClick={resetNewRepairForm}
+                >
+                  {t("clearForm")}
+                </button>
+              </div>
             </div>
           )}
 
@@ -2608,6 +2723,130 @@ function App() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {adminTab === "customers" && isAdmin && (
+            <div className="admin-tab-content">
+              <h3>{t("adminCustomers")}</h3>
+              <div className="customer-list-toolbar">
+                <input
+                  type="search"
+                  placeholder={t("search")}
+                  value={customerListSearch}
+                  onChange={(e) => {
+                    setCustomerListSearch(e.target.value);
+                    void loadCustomerList(e.target.value, 1);
+                  }}
+                />
+                <span className="field-help">{t("customerListTotal", { count: customerListTotal })}</span>
+                {customerMergeSelection.size >= 2 && (
+                  <button
+                    disabled={isMergingCustomers}
+                    onClick={() => void mergeCustomers()}
+                  >
+                    {isMergingCustomers ? t("loading") : t("mergeSelected", { count: customerMergeSelection.size })}
+                  </button>
+                )}
+                {customerMergeSelection.size > 0 && (
+                  <button
+                    type="button"
+                    className="clear-linked-customer-btn"
+                    onClick={() => setCustomerMergeSelection(new Set())}
+                  >
+                    {t("clearSelection")}
+                  </button>
+                )}
+              </div>
+              {isLoadingCustomerList ? (
+                <p className="field-help">{t("loading")}</p>
+              ) : customerList.length === 0 ? (
+                <p className="field-help">{t("customerHistoryNoMatches")}</p>
+              ) : (
+                <>
+                  <table className="repairs-table customer-list-table">
+                    <thead>
+                      <tr>
+                        <th className="customer-merge-col"></th>
+                        <th>{t("fullName")}</th>
+                        <th>{t("customerEmail")}</th>
+                        <th>{t("customerPhone")}</th>
+                        <th>{t("customerCity")}</th>
+                        <th>{t("repairs")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customerList.map((cust) => {
+                        const nameDisplay = [cust.firstName, cust.lastName].filter(Boolean).join(" ") || "-";
+                        const isExpanded = expandedCustomerId === cust.id;
+                        const isSelected = customerMergeSelection.has(cust.id);
+                        return (
+                          <tr
+                            key={cust.id}
+                            className={`customer-list-row ${isExpanded ? "expanded" : ""} ${isSelected ? "selected" : ""}`}
+                          >
+                            <td className="customer-merge-col">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  setCustomerMergeSelection((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(cust.id)) next.delete(cust.id);
+                                    else next.add(cust.id);
+                                    return next;
+                                  });
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="customer-expand-btn"
+                                onClick={() => setExpandedCustomerId(isExpanded ? null : cust.id)}
+                              >
+                                {nameDisplay}
+                              </button>
+                              {isExpanded && cust.repairs.length > 0 && (
+                                <ul className="customer-repairs-sublist">
+                                  {cust.repairs.map((r) => (
+                                    <li key={r.id}>
+                                      {r.repairNumber !== null ? String(r.repairNumber).padStart(4, "0") : r.publicRef}
+                                      {" · "}{r.itemName ?? t("noProduct")}
+                                      {" · "}{formatStatus(r.status, r.notified)}
+                                      {r.createdDate ? ` · ${new Date(r.createdDate).toLocaleDateString()}` : ""}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                              {isExpanded && cust.repairs.length === 0 && (
+                                <p className="field-help">{t("customerHistoryNoMatches")}</p>
+                              )}
+                            </td>
+                            <td>{cust.email ?? "-"}</td>
+                            <td>{cust.phone ?? "-"}</td>
+                            <td>{cust.city ?? "-"}</td>
+                            <td>{cust.repairs.length}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {customerListTotal > 25 && (
+                    <div className="pagination-row">
+                      <button
+                        disabled={customerListPage <= 1}
+                        onClick={() => void loadCustomerList(customerListSearch, customerListPage - 1)}
+                      >&laquo; {t("prevPage")}</button>
+                      <span>{t("pageOf", { page: customerListPage, totalPages: Math.ceil(customerListTotal / 25) })}</span>
+                      <button
+                        disabled={customerListPage >= Math.ceil(customerListTotal / 25)}
+                        onClick={() => void loadCustomerList(customerListSearch, customerListPage + 1)}
+                      >{t("nextPage")} &raquo;</button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
