@@ -2125,7 +2125,20 @@ function App() {
             >
               <Home size={14} /> {t("home")}
             </button>
-          )}        
+          )}
+          {showAdminTools && isAdmin && (
+            <button
+              className={adminTab === "customers" ? "active" : ""}
+              title={t("adminCustomers")}
+              onClick={() => {
+                setShowFunctionHub(false);
+                setAdminTab((prev) => (prev === "customers" ? "none" : "customers"));
+                closeMobileMenu();
+              }}
+            >
+              {t("adminCustomers")}
+            </button>
+          )}
           <button
             title={t("myRepairs")}
             onClick={() => {
@@ -2209,19 +2222,6 @@ function App() {
                 {t("manageUsers")}
               </button>
             </>
-          )}
-          {showAdminTools && isAdmin && (
-            <button
-              className={adminTab === "customers" ? "active" : ""}
-              title={t("adminCustomers")}
-              onClick={() => {
-                setShowFunctionHub(false);
-                setAdminTab((prev) => (prev === "customers" ? "none" : "customers"));
-                closeMobileMenu();
-              }}
-            >
-              {t("adminCustomers")}
-            </button>
           )}
           {isAdmin && (
             <button
@@ -2594,7 +2594,7 @@ function App() {
                 </button>
                 <button
                   type="button"
-                  className="clear-linked-customer-btn"
+                  className="add-repair-submit"
                   onClick={resetNewRepairForm}
                 >
                   {t("clearForm")}

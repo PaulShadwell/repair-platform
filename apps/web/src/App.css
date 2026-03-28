@@ -188,8 +188,40 @@
 
 .header-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0;
   flex-wrap: wrap;
+  border-bottom: 2px solid #cdd8e5;
+  padding-bottom: 0;
+}
+
+.header-actions > button {
+  position: relative;
+  padding: 0.55rem 0.9rem;
+  margin: 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: #3c5572;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+  bottom: -2px;
+  margin-bottom: 0;
+}
+
+.header-actions > button:hover {
+  background: #e8eef6;
+  color: #1e3a5c;
+}
+
+.header-actions > button.active {
+  background: #fff;
+  color: #1e3a5c;
+  font-weight: 600;
+  border-color: #cdd8e5;
+  border-bottom: 2px solid #fff;
 }
 
 .account-drawer-overlay {
@@ -288,10 +320,12 @@
   gap: 0.35rem;
 }
 
-.header-actions button.active {
-  background: #2a5d93;
-  color: #fff;
-  border-color: #2a5d93;
+.header-actions > button.active {
+  background: #fff;
+  color: #1e3a5c;
+  font-weight: 600;
+  border-color: #cdd8e5;
+  border-bottom-color: #fff;
 }
 
 .grid {
@@ -1432,15 +1466,24 @@ button {
     border-radius: 8px;
     background: #fff;
     padding: 0.5rem;
+    border-bottom: none;
   }
 
   .header-actions.mobile-actions.open {
     display: flex;
   }
 
-  .header-actions.mobile-actions button {
+  .header-actions.mobile-actions > button {
     width: 100%;
     justify-content: flex-start;
+    border-radius: 6px;
+    bottom: 0;
+  }
+
+  .header-actions.mobile-actions > button.active {
+    background: #eef3f9;
+    border-color: transparent;
+    border-bottom: none;
   }
 
   .grid {
