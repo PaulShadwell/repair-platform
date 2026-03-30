@@ -8,14 +8,16 @@ import { isAdmin } from "../services/rbac.js";
 export const inventoryRouter = Router();
 inventoryRouter.use(requireAuth);
 
+const emptyToNull = z.string().transform((v) => v.trim() || null);
+
 const itemSchema = z.object({
   name: z.string().min(1).max(300),
-  sku: z.string().max(100).nullable().optional(),
-  category: z.string().max(100).nullable().optional(),
+  sku: emptyToNull.pipe(z.string().max(100).nullable()).optional(),
+  category: emptyToNull.pipe(z.string().max(100).nullable()).optional(),
   unitCost: z.number().min(0).nullable().optional(),
   unitLabel: z.string().max(20).optional(),
-  supplierId: z.string().uuid().nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
+  supplierId: emptyToNull.pipe(z.string().uuid().nullable()).optional(),
+  notes: emptyToNull.pipe(z.string().max(2000).nullable()).optional(),
   isActive: z.boolean().optional(),
 });
 

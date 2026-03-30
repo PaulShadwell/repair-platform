@@ -8,14 +8,16 @@ import { isAdmin } from "../services/rbac.js";
 export const suppliersRouter = Router();
 suppliersRouter.use(requireAuth);
 
+const emptyToNull = z.string().transform((v) => v.trim() || null);
+
 const supplierSchema = z.object({
   name: z.string().min(1).max(200),
-  contactName: z.string().max(200).nullable().optional(),
-  email: z.string().email().max(200).nullable().optional(),
-  phone: z.string().max(50).nullable().optional(),
-  website: z.string().max(500).nullable().optional(),
-  address: z.string().max(500).nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
+  contactName: emptyToNull.pipe(z.string().max(200).nullable()).optional(),
+  email: emptyToNull.pipe(z.string().email().max(200).nullable()).optional(),
+  phone: emptyToNull.pipe(z.string().max(50).nullable()).optional(),
+  website: emptyToNull.pipe(z.string().max(500).nullable()).optional(),
+  address: emptyToNull.pipe(z.string().max(500).nullable()).optional(),
+  notes: emptyToNull.pipe(z.string().max(2000).nullable()).optional(),
   isActive: z.boolean().optional(),
 });
 
