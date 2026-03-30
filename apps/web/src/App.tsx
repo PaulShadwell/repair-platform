@@ -3236,10 +3236,12 @@ function App() {
                   {assignees.length > 0 && canAssignRepairs && (
                     <select
                       className="detail-assign-select"
-                      defaultValue={selectedRepair.assignedToUserId ?? ""}
-                      onChange={(e) => void updateAssignment(selectedRepair.id, e.target.value)}
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) void updateAssignment(selectedRepair.id, e.target.value);
+                      }}
                     >
-                      <option value="">{t("unassigned")}</option>
+                      <option value="" disabled>{t("assignToRepairer")}</option>
                       {assignees.map((u) => (
                         <option key={u.id} value={u.id}>
                           {u.fullName}
