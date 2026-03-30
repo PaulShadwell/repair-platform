@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Languages, Search, LogOut, Printer, Plus, Trash2, ArrowLeft, Menu, X, UserCircle, Pencil, Eye, EyeOff, Home, FileDown, FileText, Save, Power, KeyRound } from "lucide-react";
+import { Languages, Search, LogOut, Printer, Plus, Trash2, ArrowLeft, Menu, X, UserCircle, Pencil, Eye, EyeOff, Home, FileDown, FileText, Save, Power, KeyRound, Upload, Receipt, Package } from "lucide-react";
 import "./App.css";
 import { api, setApiToken, setUnauthorizedHandler } from "./api";
 import type {
   Assignee,
   DashboardMetrics,
+  InventoryItem,
   PrinterProfile,
   Repair,
   RepairChangeHistoryEntry,
   RepairerAdmin,
+  RepairMaterial,
   RepairsPagination,
   RepairsSort,
+  Supplier,
   UserRoleKey,
   User,
   UserProfile,
@@ -51,8 +54,105 @@ type BusyAction =
   | "changePassword"
   | "exportCsv";
 
+function MaterialAddRow({ inventoryItems, onLoadInventory, onAdd }: {
+  inventoryItems: InventoryItem[];
+  onLoadInventory: () => void;
+  onAdd: (data: { inventoryItemId?: string | null; description: string; quantity: number; unitCost: number; billedToCustomer: boolean; notes?: string }) => void;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [desc, setDesc] = useState("");
+  const [qty, setQty] = useState(1);
+  const [cost, setCost] = useState(0);
+  const [billed, setBilled] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [invItemId, setInvItemId] = useState<string>("");
+
+  useEffect(() => {
+    if (open && inventoryItems.length === 0) onLoadInventory();
+  }, [open]);
+
+  function handleSelectInventory(id: string) {
+    setInvItemId(id);
+    if (id) {
+      const item = inventoryItems.find((i) => i.id === id);
+      if (item) {
+        setDesc(item.name);
+        setCost(item.unitCost != null ? Number(item.unitCost) : 0);
+      }
+    }
+  }
+
+  function handleSubmit() {
+    if (!desc.trim()) return;
+    onAdd({
+      inventoryItemId: invItemId || null,
+      description: desc.trim(),
+      quantity: qty,
+      unitCost: cost,
+      billedToCustomer: billed,
+      notes: notes.trim() || undefined,
+    });
+    setOpen(false);
+    setDesc("");
+    setQty(1);
+    setCost(0);
+    setBilled(false);
+    setNotes("");
+    setInvItemId("");
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="add-material-btn" onClick={() => setOpen(true)}>
+        <Plus size={14} /> {t("addMaterial")}
+      </button>
+    );
+  }
+
+  return (
+    <div className="material-add-form">
+      <label>
+        {t("materialSelectFromInventory")}
+        <select value={invItemId} onChange={(e) => handleSelectInventory(e.target.value)}>
+          <option value="">{t("materialCustomItem")}</option>
+          {inventoryItems.filter((i) => i.isActive).map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}{item.sku ? ` (${item.sku})` : ""} — CHF {item.unitCost != null ? Number(item.unitCost).toFixed(2) : "0.00"}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        {t("materialDescription")} *
+        <input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} />
+      </label>
+      <label>
+        {t("materialQty")}
+        <input type="number" min="0" step="0.001" value={qty} onChange={(e) => setQty(Number(e.target.value))} />
+      </label>
+      <label>
+        {t("materialUnitCost")}
+        <input type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(Number(e.target.value))} />
+      </label>
+      <label className="checkbox-label">
+        <input type="checkbox" checked={billed} onChange={(e) => setBilled(e.target.checked)} />
+        {t("materialBilled")}
+      </label>
+      <label>
+        {t("materialNotes")}
+        <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </label>
+      <div className="inline-edit-actions">
+        <button type="button" onClick={handleSubmit}><Save size={14} /> {t("save")}</button>
+        <button type="button" onClick={() => setOpen(false)}>{t("cancel")}</button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
-  const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings">(
+  const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers">(
     "none",
   );
   const { t, i18n } = useTranslation();
@@ -210,6 +310,16 @@ function App() {
   const [brandLogoSrc, setBrandLogoSrc] = useState<string>(DEFAULT_LOGO_SRC);
   const [brandingDraft, setBrandingDraft] = useState({ appName: "" });
   const [brandLogoFile, setBrandLogoFile] = useState<File | null>(null);
+
+  const [repairMaterials, setRepairMaterials] = useState<RepairMaterial[]>([]);
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [editingInventoryItem, setEditingInventoryItem] = useState<Partial<InventoryItem> | null>(null);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [editingSupplier, setEditingSupplier] = useState<Partial<Supplier> | null>(null);
+
   const [busyActions, setBusyActions] = useState<Record<BusyAction, boolean>>({
     createRepair: false,
     createUser: false,
@@ -240,6 +350,7 @@ function App() {
   const canEditIntakeFields = canCreateRepair;
   const canEditOutcomeFields = canEditRepairFields;
   const canAssignRepairs = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER" || role === "POS_USER"));
+  const canManageMaterials = canEditRepairFields;
   const canManagePhotos = canEditIntakeFields || canEditOutcomeFields;
   const canPrintFromDetail = canManagePhotos;
   const canToggleLabelSimulation = canManagePrinters;
@@ -570,6 +681,28 @@ function App() {
   }, [selectedRepair?.id]);
 
   useEffect(() => {
+    const repairId = selectedRepair?.id;
+    if (!repairId) {
+      setRepairMaterials([]);
+      return;
+    }
+    let cancelled = false;
+    async function loadMaterials(): Promise<void> {
+      setIsLoadingMaterials(true);
+      try {
+        const res = await api.get<RepairMaterial[]>(`/repairs/${repairId}/materials`);
+        if (!cancelled) setRepairMaterials(res.data);
+      } catch {
+        if (!cancelled) setRepairMaterials([]);
+      } finally {
+        if (!cancelled) setIsLoadingMaterials(false);
+      }
+    }
+    void loadMaterials();
+    return () => { cancelled = true; };
+  }, [selectedRepair?.id]);
+
+  useEffect(() => {
     if (adminTab !== "addRepair") {
       setCustomerHistoryMatches([]);
       setIsLoadingCustomerHistory(false);
@@ -632,6 +765,17 @@ function App() {
     }, customerListSearch ? 300 : 0);
     return () => window.clearTimeout(timeoutId);
   }, [adminTab, customerListSearch]);
+
+  useEffect(() => {
+    if (adminTab !== "inventory") return;
+    void loadInventoryItems();
+    void loadAllSuppliers();
+  }, [adminTab]);
+
+  useEffect(() => {
+    if (adminTab !== "suppliers") return;
+    void loadAllSuppliers();
+  }, [adminTab]);
 
   useEffect(() => {
     if (!selectedRepair) {
@@ -1493,6 +1637,146 @@ function App() {
     }
   }
 
+  async function loadRepairMaterials(repairId: string): Promise<void> {
+    setIsLoadingMaterials(true);
+    try {
+      const res = await api.get<RepairMaterial[]>(`/repairs/${repairId}/materials`);
+      setRepairMaterials(res.data);
+    } catch {
+      setRepairMaterials([]);
+    } finally {
+      setIsLoadingMaterials(false);
+    }
+  }
+
+  async function addRepairMaterial(repairId: string, data: {
+    inventoryItemId?: string | null;
+    description: string;
+    quantity: number;
+    unitCost: number;
+    billedToCustomer: boolean;
+    notes?: string;
+  }): Promise<void> {
+    try {
+      await api.post(`/repairs/${repairId}/materials`, data);
+      showToast(t("materialSaved"));
+      void loadRepairMaterials(repairId);
+    } catch {
+      showToast(t("materialSaveFailed"), "error");
+    }
+  }
+
+  async function updateRepairMaterial(repairId: string, materialId: string, data: Record<string, unknown>): Promise<void> {
+    try {
+      await api.patch(`/repairs/${repairId}/materials/${materialId}`, data);
+      showToast(t("materialSaved"));
+      void loadRepairMaterials(repairId);
+    } catch {
+      showToast(t("materialSaveFailed"), "error");
+    }
+  }
+
+  async function deleteRepairMaterial(repairId: string, materialId: string): Promise<void> {
+    if (!window.confirm(t("materialDeleteConfirm"))) return;
+    try {
+      await api.delete(`/repairs/${repairId}/materials/${materialId}`);
+      showToast(t("materialDeleted"));
+      void loadRepairMaterials(repairId);
+    } catch {
+      showToast(t("materialSaveFailed"), "error");
+    }
+  }
+
+  async function uploadMaterialReceipt(repairId: string, materialId: string, file: File): Promise<void> {
+    try {
+      const formData = new FormData();
+      formData.append("receipt", file);
+      await api.post(`/repairs/${repairId}/materials/${materialId}/receipt`, formData);
+      showToast(t("materialReceiptUploaded"));
+      void loadRepairMaterials(repairId);
+    } catch {
+      showToast(t("materialSaveFailed"), "error");
+    }
+  }
+
+  async function removeMaterialReceipt(repairId: string, materialId: string): Promise<void> {
+    try {
+      await api.delete(`/repairs/${repairId}/materials/${materialId}/receipt`);
+      showToast(t("materialReceiptRemoved"));
+      void loadRepairMaterials(repairId);
+    } catch {
+      showToast(t("materialSaveFailed"), "error");
+    }
+  }
+
+  async function loadInventoryItems(): Promise<void> {
+    try {
+      const res = await api.get<InventoryItem[]>("/inventory", { params: { search: inventorySearch, includeInactive: "true" } });
+      setInventoryItems(res.data);
+    } catch {
+      setInventoryItems([]);
+    }
+  }
+
+  async function saveInventoryItem(data: Partial<InventoryItem> & { name: string }): Promise<void> {
+    try {
+      if (data.id) {
+        await api.patch(`/inventory/${data.id}`, data);
+      } else {
+        await api.post("/inventory", data);
+      }
+      showToast(t("inventorySaved"));
+      setEditingInventoryItem(null);
+      void loadInventoryItems();
+    } catch {
+      showToast(t("inventorySaveFailed"), "error");
+    }
+  }
+
+  async function deactivateInventoryItem(id: string): Promise<void> {
+    try {
+      await api.delete(`/inventory/${id}`);
+      showToast(t("inventoryDeleted"));
+      void loadInventoryItems();
+    } catch {
+      showToast(t("inventorySaveFailed"), "error");
+    }
+  }
+
+  async function loadAllSuppliers(): Promise<void> {
+    try {
+      const res = await api.get<Supplier[]>("/suppliers", { params: { search: supplierSearch, includeInactive: "true" } });
+      setSuppliers(res.data);
+    } catch {
+      setSuppliers([]);
+    }
+  }
+
+  async function saveSupplier(data: Partial<Supplier> & { name: string }): Promise<void> {
+    try {
+      if (data.id) {
+        await api.patch(`/suppliers/${data.id}`, data);
+      } else {
+        await api.post("/suppliers", data);
+      }
+      showToast(t("supplierSaved"));
+      setEditingSupplier(null);
+      void loadAllSuppliers();
+    } catch {
+      showToast(t("supplierSaveFailed"), "error");
+    }
+  }
+
+  async function deactivateSupplier(id: string): Promise<void> {
+    try {
+      await api.delete(`/suppliers/${id}`);
+      showToast(t("supplierDeleted"));
+      void loadAllSuppliers();
+    } catch {
+      showToast(t("supplierSaveFailed"), "error");
+    }
+  }
+
   async function saveBranding(): Promise<void> {
     try {
       if (brandLogoFile) {
@@ -2252,6 +2536,32 @@ function App() {
           )}
           {isAdmin && (
             <button
+              className={adminTab === "inventory" ? "active" : ""}
+              title={t("inventorySection")}
+              onClick={() => {
+                setShowFunctionHub(false);
+                setAdminTab("inventory");
+                closeMobileMenu();
+              }}
+            >
+              <Package size={14} /> {t("inventorySection")}
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              className={adminTab === "suppliers" ? "active" : ""}
+              title={t("suppliersSection")}
+              onClick={() => {
+                setShowFunctionHub(false);
+                setAdminTab("suppliers");
+                closeMobileMenu();
+              }}
+            >
+              {t("suppliersSection")}
+            </button>
+          )}
+          {isAdmin && (
+            <button
               title={t("exportCsv")}
               disabled={busyActions.exportCsv}
               onClick={() => void exportRepairsCsv()}
@@ -2999,6 +3309,211 @@ function App() {
           )}
         </section>
       )}
+          {adminTab === "inventory" && (
+            <div className="admin-tab-content">
+              <div className="detail-header-row">
+                <h3>{t("inventorySection")}</h3>
+                <button type="button" onClick={() => setAdminTab("none")}>{t("close")}</button>
+              </div>
+              <div className="inventory-toolbar">
+                <input
+                  type="text"
+                  placeholder={t("search")}
+                  value={inventorySearch}
+                  onChange={(e) => setInventorySearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") void loadInventoryItems(); }}
+                />
+                <button type="button" onClick={() => void loadInventoryItems()}><Search size={14} /></button>
+                <button
+                  type="button"
+                  onClick={() => setEditingInventoryItem({ name: "", sku: "", category: "", unitCost: null, unitLabel: "pcs", supplierId: null, notes: "", isActive: true })}
+                >
+                  <Plus size={14} /> {t("inventoryAddItem")}
+                </button>
+              </div>
+              {editingInventoryItem && (
+                <div className="inline-edit-form">
+                  <label>
+                    {t("inventoryName")} *
+                    <input type="text" value={editingInventoryItem.name ?? ""} onChange={(e) => setEditingInventoryItem((p) => ({ ...p, name: e.target.value }))} />
+                  </label>
+                  <label>
+                    {t("inventorySku")}
+                    <input type="text" value={editingInventoryItem.sku ?? ""} onChange={(e) => setEditingInventoryItem((p) => ({ ...p, sku: e.target.value || null }))} />
+                  </label>
+                  <label>
+                    {t("inventoryCategory")}
+                    <input type="text" value={editingInventoryItem.category ?? ""} onChange={(e) => setEditingInventoryItem((p) => ({ ...p, category: e.target.value || null }))} />
+                  </label>
+                  <label>
+                    {t("inventoryUnitCost")}
+                    <input type="number" step="0.01" min="0" value={editingInventoryItem.unitCost ?? ""} onChange={(e) => setEditingInventoryItem((p) => ({ ...p, unitCost: e.target.value ? Number(e.target.value) : null }))} />
+                  </label>
+                  <label>
+                    {t("inventoryUnitLabel")}
+                    <input type="text" value={editingInventoryItem.unitLabel ?? "pcs"} onChange={(e) => setEditingInventoryItem((p) => ({ ...p, unitLabel: e.target.value || "pcs" }))} />
+                  </label>
+                  <label>
+                    {t("inventorySupplier")}
+                    <select value={editingInventoryItem.supplierId ?? ""} onChange={(e) => setEditingInventoryItem((p) => ({ ...p, supplierId: e.target.value || null }))}>
+                      <option value="">{t("noSupplier")}</option>
+                      {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {t("materialNotes")}
+                    <textarea rows={2} value={editingInventoryItem.notes ?? ""} onChange={(e) => setEditingInventoryItem((p) => ({ ...p, notes: e.target.value || null }))} />
+                  </label>
+                  <div className="inline-edit-actions">
+                    <button type="button" onClick={() => {
+                      if (!editingInventoryItem.name?.trim()) return;
+                      void saveInventoryItem(editingInventoryItem as InventoryItem & { name: string });
+                    }}><Save size={14} /> {t("save")}</button>
+                    <button type="button" onClick={() => setEditingInventoryItem(null)}>{t("cancel")}</button>
+                  </div>
+                </div>
+              )}
+              {inventoryItems.length === 0 ? (
+                <p className="field-help">{t("inventoryNoItems")}</p>
+              ) : (
+                <table className="inventory-table">
+                  <thead>
+                    <tr>
+                      <th>{t("inventoryName")}</th>
+                      <th>{t("inventorySku")}</th>
+                      <th>{t("inventoryCategory")}</th>
+                      <th>{t("inventoryUnitCost")}</th>
+                      <th>{t("inventoryUnitLabel")}</th>
+                      <th>{t("inventorySupplier")}</th>
+                      <th>{t("inventoryActive")}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inventoryItems.map((item) => (
+                      <tr key={item.id} className={item.isActive ? "" : "inactive-row"}>
+                        <td>{item.name}</td>
+                        <td>{item.sku ?? "-"}</td>
+                        <td>{item.category ?? "-"}</td>
+                        <td>{item.unitCost != null ? Number(item.unitCost).toFixed(2) : "-"}</td>
+                        <td>{item.unitLabel}</td>
+                        <td>{item.supplier?.name ?? "-"}</td>
+                        <td>{item.isActive ? t("yes") : t("no")}</td>
+                        <td>
+                          <button type="button" onClick={() => setEditingInventoryItem({ ...item, unitCost: item.unitCost != null ? Number(item.unitCost) : null })}><Pencil size={14} /></button>
+                          {item.isActive && (
+                            <button type="button" onClick={() => void deactivateInventoryItem(item.id)}><Trash2 size={14} /></button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {adminTab === "suppliers" && (
+            <div className="admin-tab-content">
+              <div className="detail-header-row">
+                <h3>{t("suppliersSection")}</h3>
+                <button type="button" onClick={() => setAdminTab("none")}>{t("close")}</button>
+              </div>
+              <div className="inventory-toolbar">
+                <input
+                  type="text"
+                  placeholder={t("search")}
+                  value={supplierSearch}
+                  onChange={(e) => setSupplierSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") void loadAllSuppliers(); }}
+                />
+                <button type="button" onClick={() => void loadAllSuppliers()}><Search size={14} /></button>
+                <button
+                  type="button"
+                  onClick={() => setEditingSupplier({ name: "", contactName: "", email: "", phone: "", website: "", address: "", notes: "", isActive: true })}
+                >
+                  <Plus size={14} /> {t("supplierAdd")}
+                </button>
+              </div>
+              {editingSupplier && (
+                <div className="inline-edit-form">
+                  <label>
+                    {t("supplierName")} *
+                    <input type="text" value={editingSupplier.name ?? ""} onChange={(e) => setEditingSupplier((p) => ({ ...p, name: e.target.value }))} />
+                  </label>
+                  <label>
+                    {t("supplierContact")}
+                    <input type="text" value={editingSupplier.contactName ?? ""} onChange={(e) => setEditingSupplier((p) => ({ ...p, contactName: e.target.value || null }))} />
+                  </label>
+                  <label>
+                    {t("supplierEmail")}
+                    <input type="email" value={editingSupplier.email ?? ""} onChange={(e) => setEditingSupplier((p) => ({ ...p, email: e.target.value || null }))} />
+                  </label>
+                  <label>
+                    {t("supplierPhone")}
+                    <input type="text" value={editingSupplier.phone ?? ""} onChange={(e) => setEditingSupplier((p) => ({ ...p, phone: e.target.value || null }))} />
+                  </label>
+                  <label>
+                    {t("supplierWebsite")}
+                    <input type="url" value={editingSupplier.website ?? ""} onChange={(e) => setEditingSupplier((p) => ({ ...p, website: e.target.value || null }))} />
+                  </label>
+                  <label>
+                    {t("supplierAddress")}
+                    <textarea rows={2} value={editingSupplier.address ?? ""} onChange={(e) => setEditingSupplier((p) => ({ ...p, address: e.target.value || null }))} />
+                  </label>
+                  <label>
+                    {t("supplierNotes")}
+                    <textarea rows={2} value={editingSupplier.notes ?? ""} onChange={(e) => setEditingSupplier((p) => ({ ...p, notes: e.target.value || null }))} />
+                  </label>
+                  <div className="inline-edit-actions">
+                    <button type="button" onClick={() => {
+                      if (!editingSupplier.name?.trim()) return;
+                      void saveSupplier(editingSupplier as Supplier & { name: string });
+                    }}><Save size={14} /> {t("save")}</button>
+                    <button type="button" onClick={() => setEditingSupplier(null)}>{t("cancel")}</button>
+                  </div>
+                </div>
+              )}
+              {suppliers.length === 0 ? (
+                <p className="field-help">{t("supplierNoItems")}</p>
+              ) : (
+                <table className="inventory-table">
+                  <thead>
+                    <tr>
+                      <th>{t("supplierName")}</th>
+                      <th>{t("supplierContact")}</th>
+                      <th>{t("supplierEmail")}</th>
+                      <th>{t("supplierPhone")}</th>
+                      <th>{t("supplierWebsite")}</th>
+                      <th>{t("supplierActive")}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {suppliers.map((s) => (
+                      <tr key={s.id} className={s.isActive ? "" : "inactive-row"}>
+                        <td>{s.name}</td>
+                        <td>{s.contactName ?? "-"}</td>
+                        <td>{s.email ? <a href={`mailto:${s.email}`}>{s.email}</a> : "-"}</td>
+                        <td>{s.phone ?? "-"}</td>
+                        <td>{s.website ? <a href={s.website} target="_blank" rel="noreferrer">{s.website}</a> : "-"}</td>
+                        <td>{s.isActive ? t("yes") : t("no")}</td>
+                        <td>
+                          <button type="button" onClick={() => setEditingSupplier({ ...s })}><Pencil size={14} /></button>
+                          {s.isActive && (
+                            <button type="button" onClick={() => void deactivateSupplier(s.id)}><Trash2 size={14} /></button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
       {showFunctionHub && (
         <section className="card function-hub-card">
           <h2>{t("functionHubTitle")}</h2>
@@ -3573,6 +4088,120 @@ function App() {
                     <div className="wide"><dt>{t("material")}</dt><dd>{renderExpandableValue("material", selectedRepair.material)}</dd></div>
                     <div className="wide"><dt>{t("remarks")}</dt><dd>{renderExpandableValue("technicianNotes", selectedRepair.technicianNotes)}</dd></div>
                   </dl>
+                )}
+              </section>
+
+              <section className="detail-section">
+                <div className="section-header-row">
+                  <h3>{t("materialsSection")}</h3>
+                </div>
+                {isLoadingMaterials ? (
+                  <p>{t("loading")}</p>
+                ) : (
+                  <>
+                    {repairMaterials.length === 0 ? (
+                      <p className="field-help">{t("materialNoItems")}</p>
+                    ) : (
+                      <>
+                        <table className="materials-table">
+                          <thead>
+                            <tr>
+                              <th>{t("materialDescription")}</th>
+                              <th>{t("materialQty")}</th>
+                              <th>{t("materialUnitCost")}</th>
+                              <th>{t("materialTotalCost")}</th>
+                              <th>{t("materialBilled")}</th>
+                              <th>{t("materialReceipt")}</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {repairMaterials.map((mat) => (
+                              <tr key={mat.id}>
+                                <td>
+                                  <span>{mat.description}</span>
+                                  {mat.inventoryItem && <span className="field-help"> ({mat.inventoryItem.sku ?? mat.inventoryItem.name})</span>}
+                                  {mat.notes && <span className="field-help mat-notes">{mat.notes}</span>}
+                                </td>
+                                <td>{Number(mat.quantity)}</td>
+                                <td>{Number(mat.unitCost).toFixed(2)}</td>
+                                <td><strong>{Number(mat.totalCost).toFixed(2)}</strong></td>
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    checked={mat.billedToCustomer}
+                                    disabled={!canManageMaterials}
+                                    onChange={(e) => void updateRepairMaterial(selectedRepair.id, mat.id, { billedToCustomer: e.target.checked })}
+                                  />
+                                </td>
+                                <td>
+                                  {mat.receiptStorageKey ? (
+                                    <span className="receipt-actions">
+                                      <a
+                                        href={`${api.defaults.baseURL}/repairs/${selectedRepair.id}/materials/${mat.id}/receipt`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        title={t("materialViewReceipt")}
+                                      >
+                                        <Receipt size={14} />
+                                      </a>
+                                      {canManageMaterials && (
+                                        <button type="button" className="icon-btn" title={t("materialRemoveReceipt")} onClick={() => void removeMaterialReceipt(selectedRepair.id, mat.id)}>
+                                          <X size={12} />
+                                        </button>
+                                      )}
+                                    </span>
+                                  ) : canManageMaterials ? (
+                                    <label className="receipt-upload-label" title={t("materialUploadReceipt")}>
+                                      <Upload size={14} />
+                                      <input
+                                        type="file"
+                                        accept="image/*,.pdf"
+                                        className="hidden-input"
+                                        onChange={(e) => {
+                                          const f = e.target.files?.[0];
+                                          if (f) void uploadMaterialReceipt(selectedRepair.id, mat.id, f);
+                                          e.target.value = "";
+                                        }}
+                                      />
+                                    </label>
+                                  ) : (
+                                    <span>-</span>
+                                  )}
+                                </td>
+                                <td>
+                                  {canManageMaterials && (
+                                    <button type="button" className="icon-btn" title={t("delete")} onClick={() => void deleteRepairMaterial(selectedRepair.id, mat.id)}>
+                                      <Trash2 size={14} />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {(() => {
+                          const totalMat = repairMaterials.reduce((sum, m) => sum + Number(m.totalCost), 0);
+                          const totalBilled = repairMaterials.filter((m) => m.billedToCustomer).reduce((sum, m) => sum + Number(m.totalCost), 0);
+                          const pct = totalMat > 0 ? Math.round((totalBilled / totalMat) * 100) : 0;
+                          return (
+                            <div className="material-cost-summary">
+                              <span>{t("materialTotalMaterialCost")}: <strong>CHF {totalMat.toFixed(2)}</strong></span>
+                              <span>{t("materialTotalBilled")}: <strong>CHF {totalBilled.toFixed(2)}</strong></span>
+                              <span className="billed-pct">{t("materialBilledPercent", { percent: pct })}</span>
+                            </div>
+                          );
+                        })()}
+                      </>
+                    )}
+                    {canManageMaterials && (
+                      <MaterialAddRow
+                        inventoryItems={inventoryItems}
+                        onLoadInventory={() => void loadInventoryItems()}
+                        onAdd={(data) => void addRepairMaterial(selectedRepair.id, data)}
+                      />
+                    )}
+                  </>
                 )}
               </section>
 

@@ -106,6 +106,49 @@ export type RepairerAdmin = {
   roles: UserRoleKey[];
 };
 
+export type Supplier = {
+  id: string;
+  name: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  address: string | null;
+  notes: string | null;
+  isActive: boolean;
+  _count?: { items: number };
+};
+
+export type InventoryItem = {
+  id: string;
+  name: string;
+  sku: string | null;
+  category: string | null;
+  unitCost: number | null;
+  unitLabel: string;
+  supplierId: string | null;
+  isActive: boolean;
+  notes: string | null;
+  supplier?: { id: string; name: string } | null;
+};
+
+export type RepairMaterial = {
+  id: string;
+  repairId: string;
+  inventoryItemId: string | null;
+  description: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  billedToCustomer: boolean;
+  receiptStorageKey: string | null;
+  receiptOriginalName: string | null;
+  notes: string | null;
+  createdAt: string;
+  inventoryItem?: { id: string; name: string; sku: string | null; category: string | null } | null;
+  addedBy?: { id: string; fullName: string } | null;
+};
+
 export type PrinterProfile = {
   id: string;
   name: string;

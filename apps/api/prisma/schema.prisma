@@ -64,6 +64,7 @@ model User {
   printLogs        PrintLog[]
   pairingCodes     PrinterPairingCode[]
   passwordResetTokens PasswordResetToken[]
+  addedMaterials   RepairMaterial[]
 }
 
 model Role {
@@ -137,6 +138,7 @@ model Repair {
   statusHistory       RepairStatusHistory[]
   assignmentHistory   RepairAssignmentHistory[]
   changeHistory       RepairChangeHistory[]
+  materials           RepairMaterial[]
   printLogs           PrintLog[]
   printJobs           PrintJob[]
 
@@ -286,6 +288,63 @@ model SiteSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model Supplier {
+  id          String          @id @default(uuid())
+  name        String          @unique
+  contactName String?
+  email       String?
+  phone       String?
+  website     String?
+  address     String?
+  notes       String?
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  items       InventoryItem[]
+}
+
+model InventoryItem {
+  id          String           @id @default(uuid())
+  name        String
+  sku         String?          @unique
+  category    String?
+  unitCost    Decimal?         @db.Decimal(10, 2)
+  unitLabel   String           @default("pcs")
+  supplierId  String?
+  isActive    Boolean          @default(true)
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  supplier    Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  usages      RepairMaterial[]
+
+  @@index([supplierId])
+  @@index([category])
+}
+
+model RepairMaterial {
+  id                  String         @id @default(uuid())
+  repairId            String
+  inventoryItemId     String?
+  description         String
+  quantity            Decimal        @default(1) @db.Decimal(10, 3)
+  unitCost            Decimal        @default(0) @db.Decimal(10, 2)
+  totalCost           Decimal        @default(0) @db.Decimal(10, 2)
+  billedToCustomer    Boolean        @default(false)
+  receiptStorageKey   String?
+  receiptOriginalName String?
+  notes               String?
+  addedById           String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  repair              Repair         @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  inventoryItem       InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  addedBy             User?          @relation(fields: [addedById], references: [id], onDelete: SetNull)
+
+  @@index([repairId])
+  @@index([inventoryItemId])
 }
 
 model PasswordResetToken {

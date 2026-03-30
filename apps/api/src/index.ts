@@ -15,6 +15,9 @@ import { printAgentRouter } from "./routes/printAgent.js";
 import { profileRouter } from "./routes/profile.js";
 import { customersRouter } from "./routes/customers.js";
 import { brandingRouter } from "./routes/branding.js";
+import { suppliersRouter } from "./routes/suppliers.js";
+import { inventoryRouter } from "./routes/inventory.js";
+import { repairMaterialsRouter } from "./routes/repairMaterials.js";
 import { ensureStoragePaths } from "./services/storage.js";
 
 const app = express();
@@ -37,6 +40,9 @@ app.use("/api/profile", profileRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/customers", customersRouter);
 app.use("/api/branding", brandingRouter);
+app.use("/api/suppliers", suppliersRouter);
+app.use("/api/inventory", inventoryRouter);
+app.use("/api/repairs/:repairId/materials", repairMaterialsRouter);
 app.use(errorHandler);
 
 async function ensureBootstrapData(): Promise<void> {

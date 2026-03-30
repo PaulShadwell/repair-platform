@@ -1718,3 +1718,224 @@ button {
     width: 100%;
   }
 }
+
+/* ── Materials & Parts ── */
+.materials-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.materials-table th,
+.materials-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+.materials-table th {
+  background: #f7fafc;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #4a5568;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.materials-table td:nth-child(2),
+.materials-table td:nth-child(3),
+.materials-table td:nth-child(4),
+.materials-table th:nth-child(2),
+.materials-table th:nth-child(3),
+.materials-table th:nth-child(4) {
+  text-align: right;
+  white-space: nowrap;
+}
+.materials-table td:nth-child(5),
+.materials-table th:nth-child(5) {
+  text-align: center;
+}
+.materials-table .mat-notes {
+  display: block;
+  font-style: italic;
+}
+.material-cost-summary {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  font-size: 0.85rem;
+  border-top: 2px solid #e2e8f0;
+  margin-bottom: 0.75rem;
+}
+.material-cost-summary .billed-pct {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #ebf8ff;
+  color: #2b6cb0;
+  font-weight: 600;
+}
+.add-material-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: 1px dashed #a0aec0;
+  border-radius: 6px;
+  background: transparent;
+  color: #4a5568;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.add-material-btn:hover {
+  background: #edf2f7;
+  border-color: #718096;
+}
+.material-add-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  background: #f7fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+.material-add-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.material-add-form input[type="text"],
+.material-add-form input[type="number"],
+.material-add-form select {
+  padding: 4px 6px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.material-add-form .checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding-top: 20px;
+}
+
+.receipt-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.receipt-actions a {
+  color: #3182ce;
+}
+.receipt-upload-label {
+  cursor: pointer;
+  color: #718096;
+  display: inline-flex;
+  align-items: center;
+}
+.receipt-upload-label:hover {
+  color: #3182ce;
+}
+.hidden-input {
+  display: none;
+}
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: #718096;
+  display: inline-flex;
+  align-items: center;
+}
+.icon-btn:hover {
+  color: #e53e3e;
+}
+
+/* ── Inventory & Supplier tables ── */
+.inventory-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.inventory-toolbar input[type="text"] {
+  flex: 1;
+  min-width: 180px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.inventory-table th,
+.inventory-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+.inventory-table th {
+  background: #f7fafc;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: #4a5568;
+  text-transform: uppercase;
+}
+.inventory-table .inactive-row {
+  opacity: 0.5;
+}
+.inventory-table td button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: #718096;
+}
+.inventory-table td button:hover {
+  color: #2d3748;
+}
+
+.inline-edit-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  padding: 14px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 12px;
+}
+.inline-edit-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.inline-edit-form input,
+.inline-edit-form select,
+.inline-edit-form textarea {
+  padding: 5px 8px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.inline-edit-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
+}
+.inline-edit-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
