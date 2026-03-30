@@ -90,7 +90,9 @@ export function ThermalLabelPreview({ repair, onClose }: Props) {
           </div>
           <div className="row two-col">
             <div className="cell left strong">{t("thermalSuccessful")}</div>
-            <div className="cell right">{boolBox(repair.successful)}</div>
+            <div className="cell right">
+              {repair.outcome === "YES" ? t("yes") : repair.outcome === "PARTIAL" ? t("partial") : repair.outcome === "NO" ? t("no") : "-"}
+            </div>
           </div>
           <div className="row two-col">
             <div className="cell left strong">{t("thermalSafetyTestDone")}</div>

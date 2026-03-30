@@ -127,7 +127,6 @@ function App() {
   const [repairWorkForm, setRepairWorkForm] = useState({
     status: "IN_PROGRESS" as "IN_PROGRESS" | "WAITING_PARTS" | "NOTIFY_CUSTOMER" | "READY_FOR_PICKUP" | "COMPLETED" | "CANCELLED",
     outcome: "" as "" | "YES" | "PARTIAL" | "NO",
-    successful: null as boolean | null,
     fixDescription: "",
     material: "",
     safetyTested: null as boolean | null,
@@ -298,7 +297,6 @@ function App() {
       selectedRepair &&
       (repairWorkForm.status !== currentRepairStatusForForm ||
         repairWorkForm.outcome !== (selectedRepair.outcome ?? "") ||
-        repairWorkForm.successful !== (selectedRepair.successful ?? null) ||
         repairWorkForm.fixDescription !== (selectedRepair.fixDescription ?? "") ||
         repairWorkForm.material !== (selectedRepair.material ?? "") ||
         repairWorkForm.safetyTested !== (selectedRepair.safetyTested ?? null) ||
@@ -685,7 +683,6 @@ function App() {
       setRepairWorkForm({
         status: "IN_PROGRESS",
         outcome: "",
-        successful: null,
         fixDescription: "",
         material: "",
         safetyTested: null,
@@ -713,7 +710,6 @@ function App() {
             ? "IN_PROGRESS"
             : (selectedRepair.status as "IN_PROGRESS" | "WAITING_PARTS" | "READY_FOR_PICKUP" | "NOTIFY_CUSTOMER" | "COMPLETED" | "CANCELLED"),
       outcome: selectedRepair.outcome ?? "",
-      successful: selectedRepair.successful ?? null,
       fixDescription: selectedRepair.fixDescription ?? "",
       material: selectedRepair.material ?? "",
       safetyTested: selectedRepair.safetyTested ?? null,
@@ -1116,7 +1112,6 @@ function App() {
         status: apiStatus,
         notified: apiNotified,
         outcome: repairWorkForm.outcome || null,
-        successful: repairWorkForm.successful,
         fixDescription: repairWorkForm.fixDescription || null,
         material: repairWorkForm.material || null,
         safetyTested: repairWorkForm.safetyTested,
@@ -1663,14 +1658,6 @@ function App() {
     return d.toLocaleString(currentLang === "de" ? "de-CH" : "en-GB");
   }
 
-  function formatSuccessful(value: boolean | null): string {
-    if (selectedRepair?.outcome === "PARTIAL") return t("partial");
-    if (selectedRepair?.outcome === "YES") return t("yes");
-    if (selectedRepair?.outcome === "NO") return t("no");
-    if (value === true) return t("yes");
-    if (value === false) return t("no");
-    return t("unknown");
-  }
 
   function formatStatus(value: string | null | undefined, notified?: boolean | null): string {
     switch (value) {
@@ -3478,29 +3465,6 @@ function App() {
                       </select>
                     </label>
                     <label>
-                      {t("successful")}
-                      <select
-                        value={
-                          repairWorkForm.successful === null
-                            ? ""
-                            : repairWorkForm.successful
-                              ? "YES"
-                              : "NO"
-                        }
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setRepairWorkForm((prev) => ({
-                            ...prev,
-                            successful: value === "" ? null : value === "YES",
-                          }));
-                        }}
-                      >
-                        <option value="">{t("unknown")}</option>
-                        <option value="YES">{t("yes")}</option>
-                        <option value="NO">{t("no")}</option>
-                      </select>
-                    </label>
-                    <label>
                       {t("outcome")}
                       <select
                         value={repairWorkForm.outcome}
@@ -3591,7 +3555,6 @@ function App() {
                   </div>
                 ) : (
                   <dl className="detail-grid">
-                    <div><dt>{t("successful")}</dt><dd>{formatSuccessful(selectedRepair.successful)}</dd></div>
                     <div>
                       <dt>{t("outcome")}</dt>
                       <dd>
