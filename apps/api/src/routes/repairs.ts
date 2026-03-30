@@ -931,12 +931,37 @@ repairsRouter.patch("/:id", async (req: AuthenticatedRequest, res) => {
   }
 
   if (isAssignChange && parsed.data.assignedToUserId !== existing.assignedToUserId) {
+    const [fromUser, toUser] = await Promise.all([
+      existing.assignedToUserId
+        ? prisma.user.findUnique({ where: { id: existing.assignedToUserId }, select: { fullName: true } })
+        : null,
+      parsed.data.assignedToUserId
+        ? prisma.user.findUnique({ where: { id: parsed.data.assignedToUserId }, select: { fullName: true } })
+        : null,
+    ]);
     await prisma.repairAssignmentHistory.create({
       data: {
         repairId: existing.id,
         fromUserId: existing.assignedToUserId,
         toUserId: parsed.data.assignedToUserId ?? null,
         changedById: user.id,
+      },
+    });
+    await prisma.repairChangeHistory.create({
+      data: {
+        repairId: existing.id,
+        changedById: user.id,
+        changeType: "ASSIGNMENT",
+        changedFields: ["assignedToUserId"],
+        previousData: {
+          assignedToUserId: existing.assignedToUserId ?? null,
+          assignedToName: fromUser?.fullName ?? null,
+        } as prismaClientPackage.Prisma.InputJsonValue,
+        nextData: {
+          assignedToUserId: parsed.data.assignedToUserId ?? null,
+          assignedToName: toUser?.fullName ?? null,
+          changedByName: user.fullName,
+        } as prismaClientPackage.Prisma.InputJsonValue,
       },
     });
   }

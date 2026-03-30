@@ -1865,6 +1865,8 @@ function App() {
         return t("historyPhotoAdd");
       case "PHOTO_REMOVE":
         return t("historyPhotoRemove");
+      case "ASSIGNMENT":
+        return t("historyAssignment");
       default:
         return changeType;
     }
@@ -3625,7 +3627,17 @@ function App() {
                         <span className="field-help">
                           {formatDisplayDateTime(entry.createdAt)} - {(entry.changedBy?.fullName ?? entry.changedBy?.username ?? t("unknown"))}
                         </span>
-                        {entry.changedFields.length > 0 && (
+                        {entry.changeType === "ASSIGNMENT" ? (
+                          <div className="field-help">
+                            {t("historyAssignmentFrom", {
+                              from: (entry.previousData?.assignedToName as string) || t("unassigned"),
+                            })}
+                            {" → "}
+                            {t("historyAssignmentTo", {
+                              to: (entry.nextData?.assignedToName as string) || t("unassigned"),
+                            })}
+                          </div>
+                        ) : entry.changedFields.length > 0 && (
                           <div className="field-help">
                             {t("repairChangeFieldsLabel")}: {entry.changedFields.join(", ")}
                           </div>
