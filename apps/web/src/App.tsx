@@ -3782,10 +3782,47 @@ function App() {
               </div>
               <div className="detail-meta-chips">
                 <span className="detail-chip"><strong>{t("reference")}:</strong> {formatRepairRef(selectedRepair)}</span>
-                <span className="detail-chip"><strong>{t("status")}:</strong> {formatStatus(selectedRepair.status, selectedRepair.notified ?? false)}</span>
                 <span className="detail-chip"><strong>{t("assigned")}:</strong> {selectedRepair.assignedToUser?.fullName ?? t("unassigned")}</span>
                 <span className="detail-chip"><strong>{t("customerNotified")}:</strong> {selectedRepair.notified ? t("yes") : t("no")}</span>
               </div>
+
+              {(() => {
+                const steps = [
+                  { key: "NEW", label: t("timelineNew") },
+                  { key: "IN_PROGRESS", label: t("timelineInProgress") },
+                  { key: "READY_FOR_PICKUP", label: t("timelineReady") },
+                  { key: "COMPLETED", label: t("timelineCompleted") },
+                ];
+                const statusOrder = ["NEW", "IN_PROGRESS", "WAITING_PARTS", "NOTIFY_CUSTOMER", "READY_FOR_PICKUP", "COMPLETED"];
+                const currentIdx = statusOrder.indexOf(selectedRepair.status);
+                const isCancelled = selectedRepair.status === "CANCELLED";
+                return (
+                  <div className={`repair-timeline${isCancelled ? " cancelled" : ""}`}>
+                    {steps.map((step, i) => {
+                      const stepIdx = statusOrder.indexOf(step.key);
+                      const isActive = step.key === selectedRepair.status ||
+                        (selectedRepair.status === "WAITING_PARTS" && step.key === "IN_PROGRESS") ||
+                        (selectedRepair.status === "NOTIFY_CUSTOMER" && step.key === "IN_PROGRESS");
+                      const isDone = !isCancelled && currentIdx > stepIdx;
+                      return (
+                        <div key={step.key} className={`timeline-step${isDone ? " done" : ""}${isActive ? " active" : ""}`}>
+                          <div className="timeline-dot">
+                            {isDone ? <span className="timeline-check">&#10003;</span> : <span className="timeline-num">{i + 1}</span>}
+                          </div>
+                          {i < steps.length - 1 && <div className={`timeline-line${isDone ? " done" : ""}`} />}
+                          <span className="timeline-label">{step.label}</span>
+                        </div>
+                      );
+                    })}
+                    {(selectedRepair.status === "WAITING_PARTS" || selectedRepair.status === "NOTIFY_CUSTOMER") && (
+                      <span className="timeline-substatus">{formatStatus(selectedRepair.status, selectedRepair.notified ?? false)}</span>
+                    )}
+                    {isCancelled && (
+                      <span className="timeline-substatus cancelled">{t("statusCancelled")}</span>
+                    )}
+                  </div>
+                );
+              })()}
 
               <section className="detail-section">
                 <div className="section-header-row">

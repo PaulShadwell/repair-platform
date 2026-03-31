@@ -452,14 +452,12 @@
 }
 
 .intake-subsection-title {
-  margin: 1rem 0 0.5rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #4a5568;
+  margin: 1.1rem 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #718096;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding-bottom: 0.35rem;
-  border-bottom: 2px solid #e2e8f0;
+  letter-spacing: 0.05em;
 }
 
 .intake-subsection-title:first-child {
@@ -913,6 +911,127 @@
   font-weight: 600;
 }
 
+/* ── Repair Status Timeline ── */
+.repair-timeline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 1.25rem 1.5rem 0.75rem;
+  margin: 0.75rem 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #a0aec0;
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s;
+}
+
+.timeline-step.done .timeline-dot {
+  background: #3182ce;
+  border-color: #3182ce;
+  color: #fff;
+}
+
+.timeline-step.active .timeline-dot {
+  background: #3182ce;
+  border-color: #3182ce;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.2);
+}
+
+.timeline-check {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.timeline-num {
+  font-size: 0.75rem;
+}
+
+.timeline-line {
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 18px);
+  right: calc(-50% + 18px);
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+.timeline-line.done {
+  background: #3182ce;
+}
+
+.timeline-label {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #a0aec0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.timeline-step.done .timeline-label,
+.timeline-step.active .timeline-label {
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.timeline-substatus {
+  position: absolute;
+  bottom: 4px;
+  right: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #d69e2e;
+  background: #fffff0;
+  border: 1px solid #ecc94b;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.timeline-substatus.cancelled {
+  color: #c53030;
+  background: #fff5f5;
+  border-color: #fc8181;
+}
+
+.repair-timeline.cancelled .timeline-dot {
+  border-color: #e2e8f0;
+  background: #fff;
+  color: #a0aec0;
+}
+
+.repair-timeline.cancelled .timeline-line {
+  background: #e2e8f0;
+}
+
 .customer-list-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -1029,15 +1148,15 @@
 .detail-section {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 1.1rem 1.25rem;
+  padding: 1.25rem 1.5rem;
   margin: 1rem 0;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .detail-section h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #1a202c;
   letter-spacing: -0.01em;
@@ -1048,7 +1167,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.25rem;
 }
 
 .section-header-row h3 {
@@ -1057,7 +1176,7 @@
 
 .section-header-row button {
   font-size: 0.8rem;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 6px;
   border: 1px solid #cbd5e0;
   background: #fff;
@@ -1075,11 +1194,11 @@
 }
 
 .section-hint {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.85rem;
   color: #718096;
   font-size: 0.78rem;
   font-style: italic;
-  padding: 4px 10px;
+  padding: 5px 12px;
   background: #f7fafc;
   border-radius: 4px;
   border-left: 3px solid #cbd5e0;
@@ -1088,32 +1207,40 @@
 .detail-grid {
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem 1.25rem;
+  grid-template-columns: 1fr;
+  gap: 0;
 }
 
 .detail-grid > div {
-  margin: 0;
-  padding: 0.4rem 0;
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  align-items: baseline;
+  padding: 0.6rem 0;
   border-bottom: 1px solid #f0f4f8;
+  margin: 0;
+}
+
+.detail-grid > div:last-child {
+  border-bottom: none;
 }
 
 .detail-grid > div.wide {
-  grid-column: span 2;
+  grid-column: span 1;
 }
 
 .detail-grid dt {
-  color: #718096;
-  font-size: 0.72rem;
-  margin: 0 0 0.2rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: #a0aec0;
+  font-size: 0.82rem;
+  margin: 0;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .detail-grid dd {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  font-weight: 500;
   line-height: 1.4;
   word-break: break-word;
   color: #1a202c;
@@ -1788,12 +1915,12 @@ button {
     grid-column: span 1;
   }
 
-  .detail-grid {
-    grid-template-columns: 1fr;
+  .detail-grid > div {
+    grid-template-columns: 120px 1fr;
   }
 
-  .detail-grid > div.wide {
-    grid-column: span 1;
+  .detail-section {
+    padding: 1rem;
   }
 
   .intake-edit-grid {
@@ -1822,6 +1949,32 @@ button {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.45rem;
+  }
+
+  .repair-timeline {
+    padding: 1rem 0.75rem 0.6rem;
+  }
+
+  .timeline-dot {
+    width: 26px;
+    height: 26px;
+  }
+
+  .timeline-line {
+    top: 13px;
+    left: calc(50% + 15px);
+    right: calc(-50% + 15px);
+  }
+
+  .timeline-label {
+    font-size: 0.68rem;
+  }
+
+  .timeline-substatus {
+    position: static;
+    margin-top: 8px;
+    width: 100%;
+    text-align: center;
   }
 
   .detail-chip {
