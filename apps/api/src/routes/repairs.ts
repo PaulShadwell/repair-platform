@@ -1007,12 +1007,18 @@ repairsRouter.patch("/:id/work", async (req: AuthenticatedRequest, res) => {
   }
 
   const user = req.user!;
-  if (!hasPermission(user.roles, "repairs:edit_repair_fields")) {
+  const canEditWork =
+    hasPermission(user.roles, "repairs:edit_repair_fields") ||
+    hasPermission(user.roles, "repairs:edit_pos_fields");
+  if (!canEditWork) {
     res.status(403).json({ message: "Role cannot edit repair work fields" });
     return;
   }
   const canEdit =
-    repair.assignedToUserId === user.id || isAdmin(user.roles) || user.roles.includes("SUPERVISOR");
+    repair.assignedToUserId === user.id ||
+    isAdmin(user.roles) ||
+    user.roles.includes("SUPERVISOR") ||
+    hasPermission(user.roles, "repairs:edit_pos_fields");
   if (!canEdit) {
     res.status(403).json({ message: "Only assigned repairer can edit repair work fields" });
     return;

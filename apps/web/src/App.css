@@ -681,6 +681,17 @@
   gap: 0.5rem;
 }
 
+.bar-row.clickable {
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.bar-row.clickable:hover {
+  background: #edf2f7;
+}
+
 .bar-label {
   font-size: 0.82rem;
   white-space: nowrap;
@@ -1271,7 +1282,7 @@
   padding: 6px 10px;
   border: 1px solid #cbd5e0;
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -1309,6 +1320,23 @@
   grid-column: span 2;
 }
 
+.repair-outcome-edit-grid label.checkbox-label,
+.intake-edit-grid label.checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding-top: 1.4rem;
+}
+
+.repair-outcome-edit-grid label.checkbox-label input[type="checkbox"],
+.intake-edit-grid label.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3182ce;
+  cursor: pointer;
+}
+
 .repair-outcome-edit-grid textarea,
 .repair-outcome-edit-grid select,
 .repair-outcome-edit-grid input {
@@ -1318,7 +1346,7 @@
   padding: 6px 10px;
   border: 1px solid #cbd5e0;
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -1473,6 +1501,23 @@ button {
 .photo-upload-btn:hover {
   background: #e8eef6;
   border-color: #9eb2c8;
+}
+
+.photo-upload-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.photo-info-tip {
+  font-size: 1rem;
+  color: #a0aec0;
+  cursor: help;
+  line-height: 1;
+}
+
+.photo-info-tip:hover {
+  color: #4a5568;
 }
 
 .photo-grid {
@@ -1722,18 +1767,24 @@ button {
 }
 
 .repair-work-actions button:first-child {
-  background: #3182ce;
+  background: #2b6cb0;
   color: #fff;
-  border: 1px solid #3182ce;
+  border: 1px solid #2b6cb0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 8px 24px;
+  box-shadow: 0 2px 4px rgba(43, 108, 176, 0.3);
 }
 
 .repair-work-actions button:first-child:hover {
-  background: #2b6cb0;
+  background: #2c5282;
+  box-shadow: 0 3px 6px rgba(43, 108, 176, 0.4);
 }
 
 .repair-work-actions button:first-child:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .repair-work-actions button:not(:first-child) {

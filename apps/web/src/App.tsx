@@ -348,7 +348,7 @@ function App() {
   const canViewArchivedItems = canCreateRepair;
   const canEditRepairFields = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER"));
   const canEditIntakeFields = canCreateRepair || canEditRepairFields;
-  const canEditOutcomeFields = canEditRepairFields;
+  const canEditOutcomeFields = canEditRepairFields || canCreateRepair;
   const canAssignRepairs = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER" || role === "POS_USER"));
   const canManageMaterials = canEditRepairFields;
   const canManagePhotos = canEditIntakeFields || canEditOutcomeFields;
@@ -1290,6 +1290,9 @@ function App() {
       await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
       showToast(t("repairFieldsSaved"));
       setIsEditingRepairWork(false);
+      if (apiStatus === "COMPLETED" || apiStatus === "CANCELLED") {
+        setSelectedRepairId(null);
+      }
     } finally {
       setBusy("saveRepairWork", false);
     }
@@ -1550,6 +1553,26 @@ function App() {
   function sortIndicator(sortBy: string): string {
     if (sort.sortBy !== sortBy) return "";
     return sort.sortDir === "asc" ? " ↑" : " ↓";
+  }
+
+  function renderPagination() {
+    return (
+      <div className="pagination">
+        <button
+          disabled={pagination.page <= 1}
+          onClick={() => void loadRepairs(scope, searchText, pagination.page - 1, sort, viewMode, false, listFilters)}
+        >
+          {t("prev")}
+        </button>
+        <span>{t("pageSummary", { page: pagination.page, totalPages: pagination.totalPages, total: pagination.total })}</span>
+        <button
+          disabled={pagination.page >= pagination.totalPages}
+          onClick={() => void loadRepairs(scope, searchText, pagination.page + 1, sort, viewMode, false, listFilters)}
+        >
+          {t("next")}
+        </button>
+      </div>
+    );
   }
 
   function startResizing(): void {
@@ -2078,7 +2101,7 @@ function App() {
 
   function canEditRepairWork(repair: Repair): boolean {
     if (!user) return false;
-    return canEditRepairFields && (isAdmin || isSupervisor || repair.assignedToUserId === user.id);
+    return canEditOutcomeFields && (isAdmin || isSupervisor || canCreateRepair || repair.assignedToUserId === user.id);
   }
 
   function canToggleCustomerNotified(repair: Repair): boolean {
@@ -2747,7 +2770,16 @@ function App() {
                         {(() => {
                           const max = Math.max(...metrics.statusBreakdown.map((row) => row.count), 0);
                           return metrics.statusBreakdown.map((row) => (
-                            <div key={row.status} className="bar-row">
+                            <div
+                              key={row.status}
+                              className="bar-row clickable"
+                              onClick={() => {
+                                setAdminTab("none");
+                                setShowFunctionHub(false);
+                                const isArchived = row.status === "COMPLETED" || row.status === "CANCELLED";
+                                void loadRepairs("all", "", 1, sort, isArchived ? "archived" : "active", true, { status: row.status });
+                              }}
+                            >
                               <span className="bar-label">{formatStatus(row.status)}</span>
                               <div className="bar-track">
                                 <div
@@ -3691,6 +3723,7 @@ function App() {
           </div>
           <p className="field-help">{t("listKeyboardHint")}</p>
           {isLoading && <p>Loading...</p>}
+          {renderPagination()}
           <table className="repairs-table">
             <thead>
               <tr>
@@ -3734,21 +3767,7 @@ function App() {
               ))}
             </tbody>
           </table>
-          <div className="pagination">
-            <button
-              disabled={pagination.page <= 1}
-              onClick={() => void loadRepairs(scope, searchText, pagination.page - 1, sort, viewMode, false, listFilters)}
-            >
-              {t("prev")}
-            </button>
-            <span>{t("pageSummary", { page: pagination.page, totalPages: pagination.totalPages, total: pagination.total })}</span>
-            <button
-              disabled={pagination.page >= pagination.totalPages}
-              onClick={() => void loadRepairs(scope, searchText, pagination.page + 1, sort, viewMode, false, listFilters)}
-            >
-              {t("next")}
-            </button>
-          </div>
+          {renderPagination()}
         </aside>
         <div
           className={`grid-resizer ${isResizing ? "active" : ""}`}
@@ -4066,31 +4085,21 @@ function App() {
                       </select>
                     </label>
                     <label>
-                      {t("safetyTest")}
-                      <select
-                        value={
-                          repairWorkForm.safetyTested === null
-                            ? ""
-                            : repairWorkForm.safetyTested
-                              ? "YES"
-                              : "NO"
-                        }
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setRepairWorkForm((prev) => ({
-                            ...prev,
-                            safetyTested: value === "" ? null : value === "YES",
-                          }));
-                        }}
-                      >
-                        <option value="">{t("unknown")}</option>
-                        <option value="YES">{t("yes")}</option>
-                        <option value="NO">{t("no")}</option>
-                      </select>
-                    </label>
-                    <label>
                       {t("lastUpdate")}
                       <input value={formatDisplayDateTime(selectedRepair.updatedAt)} readOnly />
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={repairWorkForm.safetyTested === true}
+                        onChange={(e) =>
+                          setRepairWorkForm((prev) => ({
+                            ...prev,
+                            safetyTested: e.target.checked,
+                          }))
+                        }
+                      />
+                      {t("safetyTest")}
                     </label>
                     <label className="wide">
                       {t("fix")}
@@ -4139,6 +4148,7 @@ function App() {
                   </div>
                 ) : (
                   <dl className="detail-grid">
+                    <div><dt>{t("lastUpdate")}</dt><dd>{formatDisplayDateTime(selectedRepair.updatedAt)}</dd></div>
                     <div>
                       <dt>{t("outcome")}</dt>
                       <dd>
@@ -4152,7 +4162,6 @@ function App() {
                       </dd>
                     </div>
                     <div><dt>{t("safetyTest")}</dt><dd>{selectedRepair.safetyTested === null ? t("unknown") : selectedRepair.safetyTested ? t("yes") : t("no")}</dd></div>
-                    <div><dt>{t("lastUpdate")}</dt><dd>{formatDisplayDateTime(selectedRepair.updatedAt)}</dd></div>
                     <div className="wide"><dt>{t("fix")}</dt><dd>{renderExpandableValue("fixDescription", selectedRepair.fixDescription)}</dd></div>
                     <div className="wide"><dt>{t("material")}</dt><dd>{renderExpandableValue("material", selectedRepair.material)}</dd></div>
                     <div className="wide"><dt>{t("remarks")}</dt><dd>{renderExpandableValue("technicianNotes", selectedRepair.technicianNotes)}</dd></div>
@@ -4313,10 +4322,13 @@ function App() {
                 <div className="photos-section-header">
                   <h3>{t("photos")} ({selectedRepair.photos.length})</h3>
                   {canManagePhotos && (
-                    <label className="photo-upload-btn">
-                      <Plus size={14} /> {t("addPhotos")}
-                      <input type="file" multiple accept="image/*" onChange={(e) => void uploadPhotos(selectedRepair.id, e.target.files)} hidden />
-                    </label>
+                    <span className="photo-upload-group">
+                      <label className="photo-upload-btn">
+                        <Plus size={14} /> {t("addPhotos")}
+                        <input type="file" multiple accept="image/*" onChange={(e) => void uploadPhotos(selectedRepair.id, e.target.files)} hidden />
+                      </label>
+                      <span className="photo-info-tip" title={t("photoRequirements")}>ⓘ</span>
+                    </span>
                   )}
                 </div>
                 {selectedRepair.photos.length === 0 ? (
