@@ -236,3 +236,57 @@ customersRouter.post("/merge", async (req: AuthenticatedRequest, res) => {
 
   res.json({ customer: updated });
 });
+
+function csvCell(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const raw = String(value);
+  const escaped = raw.replace(/"/g, '""');
+  return `"${escaped}"`;
+}
+
+customersRouter.get("/export/csv", async (req: AuthenticatedRequest, res) => {
+  if (!isAdmin(req.user!.roles)) {
+    res.status(403).json({ message: "Only admins can export customer data" });
+    return;
+  }
+
+  const customers = await prisma.customer.findMany({
+    include: { repairs: { select: { id: true } } },
+    orderBy: { lastName: "asc" },
+  });
+
+  const header = [
+    "id",
+    "firstName",
+    "lastName",
+    "streetAddress",
+    "city",
+    "postcode",
+    "email",
+    "phone",
+    "repairCount",
+    "createdAt",
+  ];
+
+  const lines = [header.join(",")];
+  for (const c of customers) {
+    const row = [
+      c.id,
+      c.firstName ?? "",
+      c.lastName ?? "",
+      c.streetAddress ?? "",
+      c.city ?? "",
+      c.postcode ?? "",
+      c.email ?? "",
+      c.phone ?? "",
+      c.repairs.length,
+      c.createdAt.toISOString(),
+    ];
+    lines.push(row.map(csvCell).join(","));
+  }
+
+  const filename = `customers-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  res.setHeader("content-type", "text/csv; charset=utf-8");
+  res.setHeader("content-disposition", `attachment; filename="${filename}"`);
+  res.status(200).send(lines.join("\n"));
+});

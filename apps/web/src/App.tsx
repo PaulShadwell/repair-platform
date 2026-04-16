@@ -274,7 +274,10 @@ function App() {
   });
   const [roleDrafts, setRoleDrafts] = useState<Record<string, UserRoleKey[]>>({});
   const [showThermalPreview, setShowThermalPreview] = useState<boolean>(false);
+  const [showCsvExportDialog, setShowCsvExportDialog] = useState<boolean>(false);
+  const [csvExportType, setCsvExportType] = useState<"repairs" | "customers" | "both">("repairs");
   const [expandedDetailFields, setExpandedDetailFields] = useState<Record<string, boolean>>({});
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState<{ action: () => void; saveAction?: () => Promise<void> } | null>(null);
   const [customerHistoryMatches, setCustomerHistoryMatches] = useState<Repair[]>([]);
   const [isLoadingCustomerHistory, setIsLoadingCustomerHistory] = useState<boolean>(false);
   const [hasQueriedCustomerHistory, setHasQueriedCustomerHistory] = useState<boolean>(false);
@@ -1349,6 +1352,14 @@ function App() {
   }
 
   async function createRepair(): Promise<void> {
+    const missing: string[] = [];
+    if (!newRepair.productType.trim()) missing.push(t("articleType"));
+    if (!newRepair.itemName.trim()) missing.push(t("itemDescription"));
+    if (!newRepair.problemDescription.trim()) missing.push(t("problem"));
+    if (missing.length > 0) {
+      showToast(t("mandatoryFieldsMissing", { fields: missing.join(", ") }), "error");
+      return;
+    }
     if (newRepair.email.trim() && !isValidEmail(newRepair.email.trim())) {
       showToast(t("invalidEmailAddress"), "error");
       return;
@@ -1426,6 +1437,22 @@ function App() {
     if (!newPassword) return;
     await api.post(`/users/${userId}/reset-password`, { newPassword });
     showToast(t("passwordResetRequiresChange"), "info");
+  }
+
+  async function deleteUser(userId: string): Promise<void> {
+    if (!window.confirm(t("deleteUserConfirm"))) return;
+    try {
+      await api.delete(`/users/${userId}`);
+      await loadRepairers();
+      await loadAssignees();
+      showToast(t("userDeleted"));
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      showToast(msg || t("userDeleteFailed"), "error");
+    }
   }
 
   async function saveMyProfile(): Promise<void> {
@@ -1886,22 +1913,32 @@ function App() {
     }
   }
 
-  async function exportRepairsCsv(): Promise<void> {
+  async function downloadCsvBlob(endpoint: string, filename: string): Promise<void> {
+    const response = await api.get(endpoint, { responseType: "blob" });
+    const blob = response.data as Blob;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  async function exportCsv(type: "repairs" | "customers" | "both"): Promise<void> {
     if (!isAdmin) return;
     setBusy("exportCsv", true);
     try {
-      const response = await api.get("/repairs/export/csv", { responseType: "blob" });
-      const blob = response.data as Blob;
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
       const today = new Date().toISOString().slice(0, 10);
-      link.href = url;
-      link.download = `repairs-export-${today}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      if (type === "repairs" || type === "both") {
+        await downloadCsvBlob("/repairs/export/csv", `repairs-export-${today}.csv`);
+      }
+      if (type === "customers" || type === "both") {
+        await downloadCsvBlob("/customers/export/csv", `customers-export-${today}.csv`);
+      }
       showToast(t("csvExportStarted"));
+      setShowCsvExportDialog(false);
     } catch {
       showToast(t("csvExportFailed"), "error");
     } finally {
@@ -2619,7 +2656,7 @@ function App() {
             <button
               title={t("exportCsv")}
               disabled={busyActions.exportCsv}
-              onClick={() => void exportRepairsCsv()}
+              onClick={() => setShowCsvExportDialog(true)}
             >
               <FileDown size={14} /> {busyActions.exportCsv ? t("loadingExportCsv") : t("exportCsv")}
             </button>
@@ -2922,7 +2959,7 @@ function App() {
                 <h4 className="add-repair-section-title">{t("sectionRepairDetails")}</h4>
                 <div className="add-repair-grid">
                   <label>
-                    {t("articleType")}
+                    {t("articleType")} <span className="field-required">*</span>
                     <select
                       value={newRepair.productType}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, productType: e.target.value }))}
@@ -2942,14 +2979,14 @@ function App() {
                     />
                   </label>
                   <label className="wide">
-                    {t("itemDescription")}
+                    {t("itemDescription")} <span className="field-required">*</span>
                     <input
                       value={newRepair.itemName}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, itemName: e.target.value }))}
                     />
                   </label>
                   <label className="wide">
-                    {t("problem")}
+                    {t("problem")} <span className="field-required">*</span>
                     <input
                       value={newRepair.problemDescription}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, problemDescription: e.target.value }))}
@@ -3123,6 +3160,14 @@ function App() {
                           onClick={() => void resetRepairerPassword(repairer.id)}
                         >
                           <KeyRound size={14} />
+                        </button>
+                        <button
+                          className="manage-user-action-button danger"
+                          title={t("deleteUser")}
+                          aria-label={t("deleteUser")}
+                          onClick={() => void deleteUser(repairer.id)}
+                        >
+                          <Trash2 size={14} />
                         </button>
                       </td>
                     </tr>
@@ -3407,7 +3452,15 @@ function App() {
                   </label>
                   <label>
                     {t("inventoryCategory")}
-                    <input type="text" value={editingInventoryItem.category ?? ""} onChange={(e) => setEditingInventoryItem((p) => ({ ...p, category: e.target.value || null }))} />
+                    <select
+                      value={editingInventoryItem.category ?? ""}
+                      onChange={(e) => setEditingInventoryItem((p) => ({ ...p, category: e.target.value || null }))}
+                    >
+                      <option value="">{t("inventoryCategoryNone")}</option>
+                      <option value="stocked">{t("inventoryCategoryStocked")}</option>
+                      <option value="cafe">{t("inventoryCategoryCafe")}</option>
+                      <option value="private">{t("inventoryCategoryPrivate")}</option>
+                    </select>
                   </label>
                   <label>
                     {t("inventoryUnitCost")}
@@ -3667,7 +3720,7 @@ function App() {
               <button
                 type="button"
                 disabled={busyActions.exportCsv}
-                onClick={() => void exportRepairsCsv()}
+                onClick={() => setShowCsvExportDialog(true)}
               >
                 <FileDown size={14} /> {busyActions.exportCsv ? t("loadingExportCsv") : t("exportCsv")}
               </button>
@@ -3982,7 +4035,13 @@ function App() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (intakeHasUnsavedChanges && !window.confirm(t("unsavedChangesConfirm"))) return;
+                          if (intakeHasUnsavedChanges) {
+                            setShowUnsavedDialog({
+                              action: () => setIsEditingRepairIntake(false),
+                              saveAction: () => saveRepairIntake(selectedRepair.id),
+                            });
+                            return;
+                          }
                           setIsEditingRepairIntake(false);
                         }}
                       >
@@ -4138,7 +4197,13 @@ function App() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (workHasUnsavedChanges && !window.confirm(t("unsavedChangesConfirm"))) return;
+                          if (workHasUnsavedChanges) {
+                            setShowUnsavedDialog({
+                              action: () => setIsEditingRepairWork(false),
+                              saveAction: () => saveRepairWork(selectedRepair.id),
+                            });
+                            return;
+                          }
                           setIsEditingRepairWork(false);
                         }}
                       >
@@ -4380,6 +4445,61 @@ function App() {
           )}
         </section>
       </section>
+      )}
+
+      {showCsvExportDialog && (
+        <div className="modal-overlay" onClick={() => setShowCsvExportDialog(false)}>
+          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <h3>{t("csvExportTitle")}</h3>
+            <div className="csv-export-options">
+              <label>
+                <input type="radio" name="csvType" checked={csvExportType === "repairs"} onChange={() => setCsvExportType("repairs")} />
+                {t("csvExportRepairs")}
+              </label>
+              <label>
+                <input type="radio" name="csvType" checked={csvExportType === "customers"} onChange={() => setCsvExportType("customers")} />
+                {t("csvExportCustomers")}
+              </label>
+              <label>
+                <input type="radio" name="csvType" checked={csvExportType === "both"} onChange={() => setCsvExportType("both")} />
+                {t("csvExportBoth")}
+              </label>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-primary" disabled={busyActions.exportCsv} onClick={() => void exportCsv(csvExportType)}>
+                {busyActions.exportCsv ? t("loadingExportCsv") : t("csvExportDownload")}
+              </button>
+              <button onClick={() => setShowCsvExportDialog(false)}>{t("cancel")}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUnsavedDialog && (
+        <div className="modal-overlay">
+          <div className="modal-dialog">
+            <h3>{t("unsavedChangesTitle")}</h3>
+            <p>{t("unsavedChangesMessage")}</p>
+            <div className="modal-actions three-option">
+              {showUnsavedDialog.saveAction && (
+                <button className="btn-primary" onClick={() => {
+                  void showUnsavedDialog.saveAction!().then(() => {
+                    showUnsavedDialog.action();
+                    setShowUnsavedDialog(null);
+                  });
+                }}>
+                  {t("unsavedSave")}
+                </button>
+              )}
+              <button className="btn-danger" onClick={() => { showUnsavedDialog.action(); setShowUnsavedDialog(null); }}>
+                {t("unsavedDiscard")}
+              </button>
+              <button onClick={() => setShowUnsavedDialog(null)}>
+                {t("unsavedGoBack")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

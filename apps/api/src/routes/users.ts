@@ -295,3 +295,43 @@ usersRouter.patch("/:id/roles", requireAuth, async (req: AuthenticatedRequest, r
     },
   });
 });
+
+usersRouter.delete("/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+  if (!req.user || !hasPermission(req.user.roles, "users:manage")) {
+    res.status(403).json({ message: "Only authorized users can delete users" });
+    return;
+  }
+
+  const userId = String(req.params.id);
+  if (req.user.id === userId) {
+    res.status(400).json({ message: "You cannot delete your own account" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+  if (!user) {
+    res.status(404).json({ message: "User not found" });
+    return;
+  }
+
+  const assignedRepairs = await prisma.repair.count({
+    where: { assignedToUserId: userId, status: { notIn: ["COMPLETED", "CANCELLED"] } },
+  });
+  if (assignedRepairs > 0) {
+    res.status(400).json({
+      message: `Cannot delete: user has ${assignedRepairs} active repair(s) assigned. Reassign or complete them first.`,
+    });
+    return;
+  }
+
+  await prisma.$transaction([
+    prisma.userRole.deleteMany({ where: { userId } }),
+    prisma.repair.updateMany({ where: { assignedToUserId: userId }, data: { assignedToUserId: null } }),
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
+
+  res.json({ ok: true });
+});
