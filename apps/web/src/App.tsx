@@ -2869,14 +2869,14 @@ function App() {
                 <h4 className="add-repair-section-title">{t("sectionCustomerDetails")}</h4>
                 <div className="add-repair-grid">
                   <label>
-                    {t("customerFirstName")} <span className="field-required">*</span>
+                    <span>{t("customerFirstName")} <span className="field-required">*</span></span>
                     <input
                       value={newRepair.firstName}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, firstName: e.target.value }))}
                     />
                   </label>
                   <label>
-                    {t("customerLastName")} <span className="field-required">*</span>
+                    <span>{t("customerLastName")} <span className="field-required">*</span></span>
                     <input
                       value={newRepair.lastName}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, lastName: e.target.value }))}
@@ -2905,7 +2905,7 @@ function App() {
                     />
                   </label>
                   <label>
-                    {t("customerPhone")} <span className="field-required">*</span>
+                    <span>{t("customerPhone")} <span className="field-required">*</span></span>
                     <input
                       value={newRepair.phone}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, phone: e.target.value }))}
@@ -2962,7 +2962,7 @@ function App() {
                 <h4 className="add-repair-section-title">{t("sectionRepairDetails")}</h4>
                 <div className="add-repair-grid">
                   <label>
-                    {t("articleType")} <span className="field-required">*</span>
+                    <span>{t("articleType")} <span className="field-required">*</span></span>
                     <select
                       value={newRepair.productType}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, productType: e.target.value }))}
@@ -2982,14 +2982,14 @@ function App() {
                     />
                   </label>
                   <label className="wide">
-                    {t("itemDescription")} <span className="field-required">*</span>
+                    <span>{t("itemDescription")} <span className="field-required">*</span></span>
                     <input
                       value={newRepair.itemName}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, itemName: e.target.value }))}
                     />
                   </label>
                   <label className="wide">
-                    {t("problem")} <span className="field-required">*</span>
+                    <span>{t("problem")} <span className="field-required">*</span></span>
                     <input
                       value={newRepair.problemDescription}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, problemDescription: e.target.value }))}
