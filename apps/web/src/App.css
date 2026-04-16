@@ -6,6 +6,10 @@
   font-family: Arial, sans-serif;
 }
 
+input, select, textarea, button {
+  font-family: inherit;
+}
+
 .login-screen {
   min-height: 100vh;
   display: grid;
@@ -27,7 +31,7 @@
 
 .login-brand-logo {
   display: block;
-  width: min(100%, 660px);
+  width: min(60%, 400px);
   height: auto;
   margin: 0 auto 0.7rem;
 }
@@ -124,9 +128,8 @@
 }
 
 .header-brand-logo {
-  width: 150px;
-  max-width: 42vw;
-  height: auto;
+  width: 100px;
+  height: 100px;
   border-radius: 8px;
   object-fit: contain;
   display: block;

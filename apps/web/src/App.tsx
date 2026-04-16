@@ -1353,6 +1353,9 @@ function App() {
 
   async function createRepair(): Promise<void> {
     const missing: string[] = [];
+    if (!newRepair.firstName.trim()) missing.push(t("firstName"));
+    if (!newRepair.lastName.trim()) missing.push(t("lastName"));
+    if (!newRepair.phone.trim()) missing.push(t("customerPhone"));
     if (!newRepair.productType.trim()) missing.push(t("articleType"));
     if (!newRepair.itemName.trim()) missing.push(t("itemDescription"));
     if (!newRepair.problemDescription.trim()) missing.push(t("problem"));
@@ -2866,14 +2869,14 @@ function App() {
                 <h4 className="add-repair-section-title">{t("sectionCustomerDetails")}</h4>
                 <div className="add-repair-grid">
                   <label>
-                    {t("customerFirstName")}
+                    {t("customerFirstName")} <span className="field-required">*</span>
                     <input
                       value={newRepair.firstName}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, firstName: e.target.value }))}
                     />
                   </label>
                   <label>
-                    {t("customerLastName")}
+                    {t("customerLastName")} <span className="field-required">*</span>
                     <input
                       value={newRepair.lastName}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, lastName: e.target.value }))}
@@ -2902,7 +2905,7 @@ function App() {
                     />
                   </label>
                   <label>
-                    {t("customerPhone")}
+                    {t("customerPhone")} <span className="field-required">*</span>
                     <input
                       value={newRepair.phone}
                       onChange={(e) => setNewRepair((prev) => ({ ...prev, phone: e.target.value }))}
@@ -3161,14 +3164,16 @@ function App() {
                         >
                           <KeyRound size={14} />
                         </button>
-                        <button
-                          className="manage-user-action-button danger"
-                          title={t("deleteUser")}
-                          aria-label={t("deleteUser")}
-                          onClick={() => void deleteUser(repairer.id)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {!repairer.isActive && (
+                          <button
+                            className="manage-user-action-button danger"
+                            title={t("deleteUser")}
+                            aria-label={t("deleteUser")}
+                            onClick={() => void deleteUser(repairer.id)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
