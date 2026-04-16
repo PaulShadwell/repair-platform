@@ -11,10 +11,10 @@ const { RoleKey } = prismaClientPackage;
 
 export const usersRouter = Router();
 const createUserSchema = z.object({
-  username: z.string().min(3),
-  fullName: z.string().min(2),
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  fullName: z.string().min(2, "Full name must be at least 2 characters"),
   recoveryEmail: z.string().email().max(200).nullable().optional(),
-  password: z.string().min(8),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   role: z.nativeEnum(RoleKey).default("REPAIRER"),
 });
 const setStatusSchema = z.object({
@@ -59,7 +59,8 @@ usersRouter.post("/", requireAuth, async (req: AuthenticatedRequest, res) => {
 
   const parsed = createUserSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ message: "Invalid payload" });
+    const issues = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
+    res.status(400).json({ message: `Validation failed: ${issues.join("; ")}` });
     return;
   }
 

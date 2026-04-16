@@ -341,13 +341,13 @@ function App() {
   const isAdmin = Boolean(user?.roles.includes("ADMIN"));
   const isSupervisor = Boolean(user?.roles.includes("SUPERVISOR"));
   const canManageUsers = isAdmin || isSupervisor;
-  const canEditCustomerIntake = isAdmin || isSupervisor;
+  const canEditCustomerIntake = isAdmin || isSupervisor || canCreateRepair;
   const canManagePrinters = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR"));
   const canCreateRepair = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "POS_USER"));
   const canUseFunctionHub = canCreateRepair;
   const canViewArchivedItems = canCreateRepair;
   const canEditRepairFields = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER"));
-  const canEditIntakeFields = canCreateRepair;
+  const canEditIntakeFields = canCreateRepair || canEditRepairFields;
   const canEditOutcomeFields = canEditRepairFields;
   const canAssignRepairs = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER" || role === "POS_USER"));
   const canManageMaterials = canEditRepairFields;
@@ -473,13 +473,21 @@ function App() {
     setApiToken(token);
     if (token) {
       localStorage.setItem("rp_token", token);
-      void loadMe();
-      void loadProfile();
-      const modeFromPath = getViewModeFromPath();
-      const startScope = modeFromPath === "archived" ? "all" : scope;
-      void loadRepairs(startScope, "", 1, sort, modeFromPath).then(() => void loadFromPublicRefPath());
-      void loadAssignees();
-      void loadPrinters();
+      void (async () => {
+        try {
+          await loadMe();
+        } catch {
+          setToken(null);
+          showToast(t("sessionExpiredPleaseLogin"), "info");
+          return;
+        }
+        void loadProfile();
+        const modeFromPath = getViewModeFromPath();
+        const startScope = modeFromPath === "archived" ? "all" : scope;
+        void loadRepairs(startScope, "", 1, sort, modeFromPath).then(() => void loadFromPublicRefPath());
+        void loadAssignees();
+        void loadPrinters();
+      })();
     } else {
       localStorage.removeItem("rp_token");
       setUser(null);
@@ -1211,15 +1219,33 @@ function App() {
 
   async function uploadPhotos(repairId: string, fileList: FileList | null): Promise<void> {
     if (!fileList || fileList.length === 0) return;
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    const rejected: string[] = [];
     const formData = new FormData();
     for (const file of Array.from(fileList)) {
-      formData.append("photos", file);
+      if (file.size > MAX_FILE_SIZE) {
+        rejected.push(file.name);
+      } else {
+        formData.append("photos", file);
+      }
     }
-    await api.post(`/repairs/${repairId}/photos`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
-    setMessage(t("photosUploaded"));
+    if (rejected.length > 0) {
+      showToast(t("photoTooLarge", { names: rejected.join(", "), maxMB: 10 }), "error");
+    }
+    if (!formData.has("photos")) return;
+    try {
+      await api.post(`/repairs/${repairId}/photos`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
+      setMessage(t("photosUploaded"));
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      showToast(msg || t("photoUploadFailed"), "error");
+    }
   }
 
   async function removePhoto(repairId: string, photoId: string): Promise<void> {
@@ -1375,6 +1401,12 @@ function App() {
       await loadAssignees();
       await loadRepairers();
       showToast(t("userCreated"));
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      showToast(msg || t("userCreateFailed"), "error");
     } finally {
       setBusy("createUser", false);
     }
@@ -4145,9 +4177,9 @@ function App() {
                             <tr>
                               <th>{t("materialDescription")}</th>
                               <th>{t("materialQty")}</th>
-                              <th>{t("materialUnitCost")}</th>
-                              <th>{t("materialTotalCost")}</th>
-                              <th>{t("materialBilled")}</th>
+                              <th>{t("materialUnitCost")} (CHF)</th>
+                              <th>{t("materialTotalCost")} (CHF)</th>
+                              <th title={t("materialBilledTooltip")}>{t("materialBilled")} ⓘ</th>
                               <th>{t("materialReceipt")}</th>
                               <th></th>
                             </tr>

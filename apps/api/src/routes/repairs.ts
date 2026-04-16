@@ -276,6 +276,9 @@ const REPAIRER_FIELD_KEYS = new Set([
   "technicianNotes",
   "assignedToUserId",
   "notified",
+  "itemName",
+  "problemDescription",
+  "productType",
 ]);
 
 const REPAIR_NUMBER_LOCK_KEY = 31042026;
@@ -350,6 +353,7 @@ repairsRouter.get("/", async (req: AuthenticatedRequest, res) => {
       { problemDescription: { contains: query, mode: "insensitive" } },
       { firstName: { contains: query, mode: "insensitive" } },
       { lastName: { contains: query, mode: "insensitive" } },
+      { assignedToUser: { fullName: { contains: query, mode: "insensitive" } } },
     ];
 
     if (canSearchRepairNumber) {
@@ -388,7 +392,9 @@ repairsRouter.get("/", async (req: AuthenticatedRequest, res) => {
               { assignedToUser: { fullName: sortDir } },
               { updatedAt: "desc" },
             ]
-          : { [orderByField]: sortDir },
+          : orderByField === "repairNumber"
+            ? [{ repairNumber: { sort: sortDir, nulls: "last" } }, { updatedAt: "desc" }]
+            : { [orderByField]: sortDir },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
