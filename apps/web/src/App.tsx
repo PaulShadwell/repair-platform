@@ -341,9 +341,9 @@ function App() {
   const isAdmin = Boolean(user?.roles.includes("ADMIN"));
   const isSupervisor = Boolean(user?.roles.includes("SUPERVISOR"));
   const canManageUsers = isAdmin || isSupervisor;
-  const canEditCustomerIntake = isAdmin || isSupervisor || canCreateRepair;
   const canManagePrinters = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR"));
   const canCreateRepair = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "POS_USER"));
+  const canEditCustomerIntake = isAdmin || isSupervisor || canCreateRepair;
   const canUseFunctionHub = canCreateRepair;
   const canViewArchivedItems = canCreateRepair;
   const canEditRepairFields = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER"));
