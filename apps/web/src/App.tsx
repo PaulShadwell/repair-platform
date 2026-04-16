@@ -4177,8 +4177,8 @@ function App() {
                             <tr>
                               <th>{t("materialDescription")}</th>
                               <th>{t("materialQty")}</th>
-                              <th>{t("materialUnitCost")} (CHF)</th>
-                              <th>{t("materialTotalCost")} (CHF)</th>
+                              <th>{t("materialUnitCost")}</th>
+                              <th>{t("materialTotalCost")}</th>
                               <th title={t("materialBilledTooltip")}>{t("materialBilled")} ⓘ</th>
                               <th>{t("materialReceipt")}</th>
                               <th></th>
