@@ -433,9 +433,27 @@ function App() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   }
 
-  function confirmDiscardUnsavedChanges(): boolean {
-    if (!hasUnsavedFormChanges) return true;
-    return window.confirm(t("unsavedChangesConfirm"));
+  function guardUnsavedChanges(action: () => void): void {
+    if (!hasUnsavedFormChanges) {
+      action();
+      return;
+    }
+    let saveAction: (() => Promise<void>) | undefined;
+    if (intakeHasUnsavedChanges && selectedRepairId) {
+      const id = selectedRepairId;
+      saveAction = () => saveRepairIntake(id);
+    } else if (workHasUnsavedChanges && selectedRepairId) {
+      const id = selectedRepairId;
+      saveAction = () => saveRepairWork(id);
+    }
+    setShowUnsavedDialog({
+      action: () => {
+        setIsEditingRepairIntake(false);
+        setIsEditingRepairWork(false);
+        action();
+      },
+      saveAction,
+    });
   }
 
   function setBusy(action: BusyAction, value: boolean): void {
@@ -998,11 +1016,7 @@ function App() {
     nextViewMode: "active" | "archived",
     syncUrl = false,
     nextFilters: { status?: string; notified?: boolean } = listFilters,
-    skipUnsavedChangesGuard = false,
   ): Promise<void> {
-    if (!skipUnsavedChangesGuard && !confirmDiscardUnsavedChanges()) {
-      return;
-    }
     setIsLoading(true);
     try {
       const response = await api.get<{
@@ -1043,7 +1057,7 @@ function App() {
     } catch {
       if (nextViewMode === "archived") {
         setMessage(t("archivedViewAdminOnly"));
-        await loadRepairs("all", q, page, sortInput, "active", true, nextFilters, true);
+        await loadRepairs("all", q, page, sortInput, "active", true, nextFilters);
       } else {
         setMessage(t("failedLoadRepairs"));
       }
@@ -1215,7 +1229,7 @@ function App() {
 
   async function updateAssignment(repairId: string, assignedToUserId: string): Promise<void> {
     await api.patch(`/repairs/${repairId}`, { assignedToUserId: assignedToUserId || null });
-    await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
+    await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters);
     if (isAdmin) void loadMetrics();
     setMessage(t("assignmentUpdated"));
   }
@@ -1240,7 +1254,7 @@ function App() {
       await api.post(`/repairs/${repairId}/photos`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
+      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters);
       setMessage(t("photosUploaded"));
     } catch (err: unknown) {
       const msg =
@@ -1253,7 +1267,7 @@ function App() {
 
   async function removePhoto(repairId: string, photoId: string): Promise<void> {
     await api.delete(`/repairs/${repairId}/photos/${photoId}`);
-    await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
+    await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters);
     setMessage(t("photoRemoved"));
   }
 
@@ -1263,7 +1277,7 @@ function App() {
     setBusy("deleteRepair", true);
     try {
       await api.delete(`/repairs/${repairId}`);
-      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
+      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters);
       showToast(t("repairDeleted"));
     } finally {
       setBusy("deleteRepair", false);
@@ -1290,7 +1304,7 @@ function App() {
         safetyTested: repairWorkForm.safetyTested,
         technicianNotes: repairWorkForm.technicianNotes || null,
       });
-      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
+      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters);
       showToast(t("repairFieldsSaved"));
       setIsEditingRepairWork(false);
       if (apiStatus === "COMPLETED" || apiStatus === "CANCELLED") {
@@ -1397,7 +1411,7 @@ function App() {
         assignedToUserId: "",
         customerId: "",
       });
-      await loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters, true);
+      await loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters);
       if (isAdmin) void loadMetrics();
       showToast(t("repairCreated"));
     } finally {
@@ -1553,7 +1567,7 @@ function App() {
         itemName: repairIntakeForm.itemName || null,
         problemDescription: repairIntakeForm.problemDescription || null,
       });
-      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters, true);
+      await loadRepairs(scope, searchText, pagination.page, sort, viewMode, false, listFilters);
       showToast(t("customerIntakeSaved"));
       setIsEditingRepairIntake(false);
     } finally {
@@ -1574,10 +1588,12 @@ function App() {
   }
 
   function toggleSort(sortBy: string): void {
-    const nextDir: "asc" | "desc" =
-      sort.sortBy === sortBy ? (sort.sortDir === "asc" ? "desc" : "asc") : "asc";
-    const nextSort = { sortBy, sortDir: nextDir };
-    void loadRepairs(scope, searchText, 1, nextSort, viewMode);
+    guardUnsavedChanges(() => {
+      const nextDir: "asc" | "desc" =
+        sort.sortBy === sortBy ? (sort.sortDir === "asc" ? "desc" : "asc") : "asc";
+      const nextSort = { sortBy, sortDir: nextDir };
+      void loadRepairs(scope, searchText, 1, nextSort, viewMode);
+    });
   }
 
   function sortIndicator(sortBy: string): string {
@@ -1590,14 +1606,14 @@ function App() {
       <div className="pagination">
         <button
           disabled={pagination.page <= 1}
-          onClick={() => void loadRepairs(scope, searchText, pagination.page - 1, sort, viewMode, false, listFilters)}
+          onClick={() => guardUnsavedChanges(() => void loadRepairs(scope, searchText, pagination.page - 1, sort, viewMode, false, listFilters))}
         >
           {t("prev")}
         </button>
         <span>{t("pageSummary", { page: pagination.page, totalPages: pagination.totalPages, total: pagination.total })}</span>
         <button
           disabled={pagination.page >= pagination.totalPages}
-          onClick={() => void loadRepairs(scope, searchText, pagination.page + 1, sort, viewMode, false, listFilters)}
+          onClick={() => guardUnsavedChanges(() => void loadRepairs(scope, searchText, pagination.page + 1, sort, viewMode, false, listFilters))}
         >
           {t("next")}
         </button>
@@ -1611,11 +1627,13 @@ function App() {
   }
 
   function openRepairDetail(repairId: string): void {
-    if (repairId !== selectedRepairId && !confirmDiscardUnsavedChanges()) {
+    if (repairId === selectedRepairId) {
       return;
     }
-    setSelectedRepairId(repairId);
-    if (isMobile) setMobileView("detail");
+    guardUnsavedChanges(() => {
+      setSelectedRepairId(repairId);
+      if (isMobile) setMobileView("detail");
+    });
   }
 
   function closeMobileMenu(): void {
@@ -2470,12 +2488,12 @@ function App() {
                     <button
                       type="button"
                       title={t("settings")}
-                      onClick={() => {
+                      onClick={() => guardUnsavedChanges(() => {
                         setShowFunctionHub(false);
                         setShowProfilePage(false);
                         setAdminTab("settings");
                         closeAccountMenu();
-                      }}
+                      })}
                     >
                       <Printer size={14} /> {t("settings")}
                     </button>
@@ -2530,11 +2548,11 @@ function App() {
           {canUseFunctionHub && (
             <button
               title={t("home")}
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 setAdminTab("none");
                 setShowFunctionHub(true);
                 closeMobileMenu();
-              }}
+              })}
             >
               <Home size={14} /> {t("home")}
             </button>
@@ -2542,24 +2560,24 @@ function App() {
           <button
             className={adminTab === "none" && !showFunctionHub && viewMode === "active" && scope === "my" ? "active" : ""}
             title={t("myRepairs")}
-            onClick={() => {
+            onClick={() => guardUnsavedChanges(() => {
               setAdminTab("none");
               setShowFunctionHub(false);
               void loadRepairs("my", searchText, 1, sort, "active", true, {});
               closeMobileMenu();
-            }}
+            })}
           >
             {t("myRepairs")}
           </button>
           <button
             className={adminTab === "none" && !showFunctionHub && viewMode === "active" && scope === "all" ? "active" : ""}
             title={t("allRepairs")}
-            onClick={() => {
+            onClick={() => guardUnsavedChanges(() => {
               setAdminTab("none");
               setShowFunctionHub(false);
               void loadRepairs("all", searchText, 1, sort, "active", true, {});
               closeMobileMenu();
-            }}
+            })}
           >
             {t("allRepairs")}
           </button>
@@ -2567,12 +2585,12 @@ function App() {
             <button
               className={adminTab === "none" && !showFunctionHub && viewMode === "archived" ? "active" : ""}
               title={t("archivedItems")}
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 setAdminTab("none");
                 setShowFunctionHub(false);
                 void loadRepairs("all", searchText, 1, sort, "archived", true, {});
                 closeMobileMenu();
-              }}
+              })}
             >
               {t("archivedItems")}
             </button>
@@ -2581,11 +2599,11 @@ function App() {
             <button
               className={adminTab === "dashboard" ? "active" : ""}
               title={t("adminDashboard")}
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 setShowFunctionHub(false);
                 setAdminTab("dashboard");
                 closeMobileMenu();
-              }}
+              })}
             >
               {t("adminDashboard")}
             </button>
@@ -2594,11 +2612,11 @@ function App() {
             <button
               className={adminTab === "addRepair" ? "active" : ""}
               title={t("adminAddRepair")}
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 setShowFunctionHub(false);
                 setAdminTab("addRepair");
                 closeMobileMenu();
-              }}
+              })}
             >
               {t("adminAddRepair")}
             </button>
@@ -2607,11 +2625,11 @@ function App() {
             <button
               className={adminTab === "manageRepairers" || adminTab === "addRepairer" ? "active" : ""}
               title={t("manageUsers")}
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 setShowFunctionHub(false);
                 setAdminTab("manageRepairers");
                 closeMobileMenu();
-              }}
+              })}
             >
               {t("manageUsers")}
             </button>
@@ -2620,11 +2638,11 @@ function App() {
             <button
               className={adminTab === "customers" ? "active" : ""}
               title={t("adminCustomers")}
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 setShowFunctionHub(false);
                 setAdminTab("customers");
                 closeMobileMenu();
-              }}
+              })}
             >
               {t("adminCustomers")}
             </button>
@@ -2633,11 +2651,11 @@ function App() {
             <button
               className={adminTab === "inventory" ? "active" : ""}
               title={t("inventorySection")}
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 setShowFunctionHub(false);
                 setAdminTab("inventory");
                 closeMobileMenu();
-              }}
+              })}
             >
               <Package size={14} /> {t("inventorySection")}
             </button>
@@ -2646,11 +2664,11 @@ function App() {
             <button
               className={adminTab === "suppliers" ? "active" : ""}
               title={t("suppliersSection")}
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 setShowFunctionHub(false);
                 setAdminTab("suppliers");
                 closeMobileMenu();
-              }}
+              })}
             >
               {t("suppliersSection")}
             </button>
@@ -2813,12 +2831,12 @@ function App() {
                             <div
                               key={row.status}
                               className="bar-row clickable"
-                              onClick={() => {
+                              onClick={() => guardUnsavedChanges(() => {
                                 setAdminTab("none");
                                 setShowFunctionHub(false);
                                 const isArchived = row.status === "COMPLETED" || row.status === "CANCELLED";
                                 void loadRepairs("all", "", 1, sort, isArchived ? "archived" : "active", true, { status: row.status });
-                              }}
+                              })}
                             >
                               <span className="bar-label">{formatStatus(row.status)}</span>
                               <div className="bar-track">
@@ -3643,22 +3661,22 @@ function App() {
           <div className="function-hub-actions">
             <button
               type="button"
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 void loadRepairs("all", searchText, 1, sort, "active", true, {});
                 setAdminTab("none");
                 setShowFunctionHub(false);
-              }}
+              })}
             >
               {t("allRepairs")}
             </button>
             {canViewArchivedItems && (
               <button
                 type="button"
-                onClick={() => {
+                onClick={() => guardUnsavedChanges(() => {
                   void loadRepairs("all", searchText, 1, sort, "archived", true, {});
                   setAdminTab("none");
                   setShowFunctionHub(false);
-                }}
+                })}
               >
                 {t("archivedItems")}
               </button>
@@ -3666,10 +3684,10 @@ function App() {
             {isAdmin && (
               <button
                 type="button"
-                onClick={() => {
+                onClick={() => guardUnsavedChanges(() => {
                   setAdminTab("dashboard");
                   setShowFunctionHub(false);
-                }}
+                })}
               >
                 {t("adminDashboard")}
               </button>
@@ -3677,10 +3695,10 @@ function App() {
             {canCreateRepair && (
               <button
                 type="button"
-                onClick={() => {
+                onClick={() => guardUnsavedChanges(() => {
                   setAdminTab("addRepair");
                   setShowFunctionHub(false);
-                }}
+                })}
               >
                 {t("createRepair")}
               </button>
@@ -3688,36 +3706,36 @@ function App() {
             {canManageUsers && (
               <button
                 type="button"
-                onClick={() => {
+                onClick={() => guardUnsavedChanges(() => {
                   setAdminTab("manageRepairers");
                   setShowFunctionHub(false);
-                }}
+                })}
               >
                 {t("manageUsers")}
               </button>
             )}
             <button
               type="button"
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 void loadRepairs("all", searchText, 1, sort, "active", true, {
                   status: "READY_FOR_PICKUP",
                   notified: true,
                 });
                 setAdminTab("none");
                 setShowFunctionHub(false);
-              }}
+              })}
             >
               {t("homeReadyForPickup")}
             </button>
             <button
               type="button"
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 void loadRepairs("all", searchText, 1, sort, "active", true, {
                   status: "NOTIFY_CUSTOMER",
                 });
                 setAdminTab("none");
                 setShowFunctionHub(false);
-              }}
+              })}
             >
               {t("homeNotifyCustomer")}
             </button>
@@ -3748,7 +3766,7 @@ function App() {
               <span className="status-chip ready">{t("filterActiveLabel", { value: activeFilterLabel() })}</span>
               <button
                 type="button"
-                onClick={() => void loadRepairs(scope, searchText, 1, sort, viewMode, false, {})}
+                onClick={() => guardUnsavedChanges(() => void loadRepairs(scope, searchText, 1, sort, viewMode, false, {}))}
               >
                 {t("clearFilter")}
               </button>
@@ -3760,7 +3778,7 @@ function App() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") void loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters);
+                if (e.key === "Enter") guardUnsavedChanges(() => void loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters));
               }}
             />
             <button
@@ -3768,14 +3786,14 @@ function App() {
               title={t("clearSearch")}
               aria-label={t("clearSearch")}
               disabled={!searchText.trim()}
-              onClick={() => {
+              onClick={() => guardUnsavedChanges(() => {
                 setSearchText("");
                 void loadRepairs(scope, "", 1, sort, viewMode, false, listFilters);
-              }}
+              })}
             >
               <X size={14} />
             </button>
-            <button title={t("search")} onClick={() => void loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters)}>
+            <button title={t("search")} onClick={() => guardUnsavedChanges(() => void loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters))}>
               <Search size={14} />
             </button>
           </div>
