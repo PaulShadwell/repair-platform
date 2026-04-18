@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>User Roles and Access – Repair Platform</title>
+  <style>
+    @media print {
+      body { margin: 0; }
+      h1.title { page-break-after: avoid; }
+      h2, h3 { page-break-after: avoid; }
+      table { page-break-inside: avoid; }
+    }
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      color: #1a1a2e;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+    h1.title {
+      font-size: 1.8rem;
+      color: #1a1a2e;
+      border-bottom: 3px solid #2d4a7a;
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.3rem;
+    }
+    h1 { font-size: 0; height: 0; margin: 0; overflow: hidden; }
+    h2 {
+      font-size: 1.3rem;
+      color: #2d4a7a;
+      border-bottom: 1px solid #ccd5e0;
+      padding-bottom: 0.3rem;
+      margin-top: 2rem;
+    }
+    h3 {
+      font-size: 1.05rem;
+      color: #3a3a5c;
+      margin-top: 1.4rem;
+    }
+    p { margin: 0.6rem 0; }
+    ul { margin: 0.4rem 0; padding-left: 1.5rem; }
+    li { margin: 0.25rem 0; }
+    code {
+      background: #eef2f7;
+      padding: 0.15em 0.4em;
+      border-radius: 3px;
+      font-size: 0.9em;
+      color: #2d4a7a;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.92em;
+    }
+    thead tr {
+      background: #2d4a7a;
+      color: #fff;
+    }
+    th, td {
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+      border: 1px solid #ccd5e0;
+    }
+    tbody tr:nth-child(even) { background: #f4f7fb; }
+    tbody tr:hover { background: #e8eef6; }
+    td:first-child { font-weight: 600; }
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">User Roles and Access – Repair Platform</h1>
+</header>
+<h1 id="user-roles-and-access">User Roles and Access</h1>
+<p>This document describes the current role-based access control (RBAC)
+rules enforced by the API.</p>
+<h2 id="roles-at-a-glance">Roles at a glance</h2>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+</colgroup>
+<thead>
+<tr>
+<th>Role</th>
+<th>View Repairs</th>
+<th>Create Repair</th>
+<th>Assign Repair</th>
+<th>Print Label</th>
+<th>Edit POS Fields</th>
+<th>Edit Repair Fields</th>
+<th>Manage Users</th>
+<th>Delete Repair</th>
+<th>Archived View</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ADMIN</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>SUPERVISOR</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>POS_USER</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>REPAIRER</td>
+<td>Yes</td>
+<td>No</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>No</td>
+<td>Yes</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<h2 id="what-each-role-can-change">What each role can change</h2>
+<h3 id="posintake-fields-repairsedit_pos_fields">POS/intake fields
+(<code>repairs:edit_pos_fields</code>)</h3>
+<ul>
+<li><code>productType</code></li>
+<li><code>createdDate</code></li>
+<li><code>lastName</code></li>
+<li><code>city</code></li>
+<li><code>email</code></li>
+<li><code>phone</code></li>
+<li><code>itemName</code></li>
+<li><code>problemDescription</code></li>
+<li><code>assignedToUserId</code></li>
+</ul>
+<h3 id="repairwork-fields-repairsedit_repair_fields">Repair/work fields
+(<code>repairs:edit_repair_fields</code>)</h3>
+<ul>
+<li><code>successful</code></li>
+<li><code>outcome</code></li>
+<li><code>status</code></li>
+<li><code>fixDescription</code></li>
+<li><code>material</code></li>
+<li><code>safetyTested</code></li>
+<li><code>technicianNotes</code></li>
+<li><code>assignedToUserId</code></li>
+</ul>
+<h2 id="role-details">Role details</h2>
+<h3 id="admin">ADMIN</h3>
+<ul>
+<li>Full repair permissions (create, assign, print, update POS and
+repair/work fields)</li>
+<li>Full user management (<code>users:manage</code>)</li>
+<li>Can delete repairs</li>
+<li>Can view archived/completed repairs</li>
+<li>Can manage printer profiles and pairing codes</li>
+</ul>
+<h3 id="supervisor">SUPERVISOR</h3>
+<ul>
+<li>Full day-to-day repair permissions (create, assign, print, update
+POS and repair/work fields)</li>
+<li>Full user management (<code>users:manage</code>)</li>
+<li>Can manage printer profiles and pairing codes</li>
+<li>Cannot delete repairs (admin-only)</li>
+<li>Cannot access archived view (admin-only)</li>
+</ul>
+<h3 id="pos_user">POS_USER</h3>
+<ul>
+<li>Can create repairs, assign, print, and view repairs</li>
+<li>Can edit POS/intake fields only</li>
+<li>Cannot edit repair/work-only fields</li>
+<li>Cannot manage users</li>
+<li>Cannot delete repairs</li>
+</ul>
+<h3 id="repairer">REPAIRER</h3>
+<ul>
+<li>Can view repairs, assign, print, and update repair records</li>
+<li>Can edit repair/work fields only</li>
+<li>Cannot manage users</li>
+<li>Cannot delete repairs</li>
+<li>For <code>/repairs/:id/work</code>, user must be assigned to the
+repair (unless ADMIN or SUPERVISOR)</li>
+</ul>
+<h2 id="user-management-permissions">User management permissions</h2>
+<p>Users with <code>users:manage</code> (ADMIN and SUPERVISOR) can:</p>
+<ul>
+<li>Create users</li>
+<li>View manage-users list</li>
+<li>Activate/deactivate users</li>
+<li>Reset user passwords</li>
+<li>Assign role sets</li>
+</ul>
+<p>Safeguards:</p>
+<ul>
+<li>You cannot deactivate your own account</li>
+<li>You cannot remove your own <code>ADMIN</code> role</li>
+</ul>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>A user can have multiple roles. Effective permissions are the union
+of all assigned roles.</li>
+<li>UI visibility is role-aware, but API checks are the source of
+truth.</li>
+</ul>
+</body>
+</html>

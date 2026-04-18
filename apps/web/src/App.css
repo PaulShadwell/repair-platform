@@ -2387,3 +2387,191 @@ button {
   align-items: center;
   gap: 4px;
 }
+
+/* ── User Guide ── */
+.user-guide {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+.user-guide-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #2d4a7a;
+}
+.user-guide-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1a1a2e;
+}
+.user-guide-header-actions {
+  display: flex;
+  gap: 8px;
+}
+.user-guide-header-actions button {
+  padding: 6px 14px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+.user-guide-intro {
+  color: #4a5568;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
+.user-guide-toc {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 2rem;
+}
+.user-guide-toc h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: #2d4a7a;
+}
+.user-guide-toc ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  columns: 2;
+  column-gap: 2rem;
+}
+.user-guide-toc li {
+  margin-bottom: 0.3rem;
+  font-size: 0.9rem;
+  break-inside: avoid;
+}
+.user-guide-toc a {
+  color: #2d4a7a;
+  text-decoration: none;
+}
+.user-guide-toc a:hover {
+  text-decoration: underline;
+}
+.user-guide-body article {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #edf2f7;
+}
+.user-guide-body article:last-child {
+  border-bottom: none;
+}
+.user-guide-body h3 {
+  color: #2d4a7a;
+  font-size: 1.15rem;
+  margin: 0 0 0.6rem;
+}
+.user-guide-body h4 {
+  color: #3a3a5c;
+  font-size: 0.98rem;
+  margin: 1rem 0 0.4rem;
+}
+.user-guide-body p {
+  font-size: 0.92rem;
+  color: #2d3748;
+  line-height: 1.6;
+  margin: 0.4rem 0;
+}
+.user-guide-body ul {
+  padding-left: 1.3rem;
+  margin: 0.4rem 0;
+}
+.user-guide-body li {
+  font-size: 0.92rem;
+  color: #2d3748;
+  line-height: 1.55;
+  margin-bottom: 0.25rem;
+}
+.user-guide-dl {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) 1fr;
+  gap: 0;
+  margin: 0.6rem 0;
+}
+.user-guide-dl > div {
+  display: contents;
+}
+.user-guide-dl dt {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #2d4a7a;
+  padding: 0.4rem 0.75rem 0.4rem 0;
+  border-bottom: 1px solid #edf2f7;
+}
+.user-guide-dl dd {
+  font-size: 0.9rem;
+  color: #4a5568;
+  padding: 0.4rem 0;
+  margin: 0;
+  border-bottom: 1px solid #edf2f7;
+}
+.user-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  font-size: 0.88rem;
+}
+.user-guide-table thead tr {
+  background: #2d4a7a;
+  color: #fff;
+}
+.user-guide-table th,
+.user-guide-table td {
+  padding: 0.45rem 0.6rem;
+  text-align: center;
+  border: 1px solid #ccd5e0;
+}
+.user-guide-table td:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+.user-guide-table tbody tr:nth-child(even) {
+  background: #f7fafc;
+}
+.user-guide-table tbody tr:hover {
+  background: #edf2f7;
+}
+
+@media print {
+  header, .header-actions, .user-guide-header-actions, .message {
+    display: none !important;
+  }
+  .user-guide {
+    max-width: 100%;
+    padding: 0;
+  }
+  .user-guide-header {
+    display: block !important;
+    border-bottom: 2px solid #000;
+  }
+  .user-guide-body article {
+    page-break-inside: avoid;
+  }
+  .user-guide-body h3 {
+    page-break-after: avoid;
+  }
+  .user-guide-table {
+    page-break-inside: avoid;
+  }
+  .user-guide-toc {
+    page-break-after: always;
+  }
+}
+
+@media (max-width: 600px) {
+  .user-guide-toc ol {
+    columns: 1;
+  }
+  .user-guide-dl {
+    grid-template-columns: 1fr;
+  }
+  .user-guide-dl dt {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}

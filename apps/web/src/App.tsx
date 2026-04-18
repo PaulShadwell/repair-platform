@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Languages, Search, LogOut, Printer, Plus, Trash2, ArrowLeft, Menu, X, UserCircle, Pencil, Eye, EyeOff, Home, FileDown, FileText, Save, Power, KeyRound, Upload, Receipt, Package } from "lucide-react";
+import { Languages, Search, LogOut, Printer, Plus, Trash2, ArrowLeft, Menu, X, UserCircle, Pencil, Eye, EyeOff, Home, FileDown, FileText, Save, Power, KeyRound, Upload, Receipt, Package, HelpCircle } from "lucide-react";
+import UserGuide from "./UserGuide";
 import "./App.css";
 import { api, setApiToken, setUnauthorizedHandler } from "./api";
 import type {
@@ -152,7 +153,7 @@ function MaterialAddRow({ inventoryItems, onLoadInventory, onAdd }: {
 }
 
 function App() {
-  const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers">(
+  const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help">(
     "none",
   );
   const { t, i18n } = useTranslation();
@@ -2682,6 +2683,17 @@ function App() {
               <FileDown size={14} /> {busyActions.exportCsv ? t("loadingExportCsv") : t("exportCsv")}
             </button>
           )}
+          <button
+            className={adminTab === "help" ? "active" : ""}
+            title={t("helpButton")}
+            onClick={() => guardUnsavedChanges(() => {
+              setShowFunctionHub(false);
+              setAdminTab("help");
+              closeMobileMenu();
+            })}
+          >
+            <HelpCircle size={14} /> {t("helpButton")}
+          </button>
         </div>
         )}
       </header>
@@ -3653,6 +3665,10 @@ function App() {
               )}
             </div>
           )}
+
+      {adminTab === "help" && (
+        <UserGuide onClose={() => setAdminTab("none")} />
+      )}
 
       {showFunctionHub && (
         <section className="card function-hub-card">
