@@ -7,6 +7,12 @@ interface UserGuideProps {
 export default function UserGuide({ onClose }: UserGuideProps) {
   const { t } = useTranslation();
 
+  function scrollToSection(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault();
+    const id = e.currentTarget.getAttribute("href")?.slice(1);
+    if (id) document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <section className="user-guide">
       <div className="user-guide-header">
@@ -25,22 +31,22 @@ export default function UserGuide({ onClose }: UserGuideProps) {
         <nav className="user-guide-toc">
           <h3>{t("helpTocTitle")}</h3>
           <ol>
-            <li><a href="#guide-getting-started">{t("helpGettingStarted")}</a></li>
-            <li><a href="#guide-navigation">{t("helpNavigation")}</a></li>
-            <li><a href="#guide-creating-repair">{t("helpCreatingRepair")}</a></li>
-            <li><a href="#guide-repair-list">{t("helpRepairList")}</a></li>
-            <li><a href="#guide-repair-detail">{t("helpRepairDetail")}</a></li>
-            <li><a href="#guide-photos">{t("helpPhotos")}</a></li>
-            <li><a href="#guide-materials">{t("helpMaterials")}</a></li>
-            <li><a href="#guide-customers">{t("helpCustomers")}</a></li>
-            <li><a href="#guide-statuses">{t("helpStatuses")}</a></li>
-            <li><a href="#guide-dashboard">{t("helpDashboard")}</a></li>
-            <li><a href="#guide-user-management">{t("helpUserMgmt")}</a></li>
-            <li><a href="#guide-inventory">{t("helpInventory")}</a></li>
-            <li><a href="#guide-csv-export">{t("helpCsvExport")}</a></li>
-            <li><a href="#guide-settings">{t("helpSettings")}</a></li>
-            <li><a href="#guide-roles">{t("helpRoles")}</a></li>
-            <li><a href="#guide-tips">{t("helpTips")}</a></li>
+            <li><a href="#guide-getting-started" onClick={scrollToSection}>{t("helpGettingStarted")}</a></li>
+            <li><a href="#guide-navigation" onClick={scrollToSection}>{t("helpNavigation")}</a></li>
+            <li><a href="#guide-creating-repair" onClick={scrollToSection}>{t("helpCreatingRepair")}</a></li>
+            <li><a href="#guide-repair-list" onClick={scrollToSection}>{t("helpRepairList")}</a></li>
+            <li><a href="#guide-repair-detail" onClick={scrollToSection}>{t("helpRepairDetail")}</a></li>
+            <li><a href="#guide-photos" onClick={scrollToSection}>{t("helpPhotos")}</a></li>
+            <li><a href="#guide-materials" onClick={scrollToSection}>{t("helpMaterials")}</a></li>
+            <li><a href="#guide-customers" onClick={scrollToSection}>{t("helpCustomers")}</a></li>
+            <li><a href="#guide-statuses" onClick={scrollToSection}>{t("helpStatuses")}</a></li>
+            <li><a href="#guide-dashboard" onClick={scrollToSection}>{t("helpDashboard")}</a></li>
+            <li><a href="#guide-user-management" onClick={scrollToSection}>{t("helpUserMgmt")}</a></li>
+            <li><a href="#guide-inventory" onClick={scrollToSection}>{t("helpInventory")}</a></li>
+            <li><a href="#guide-csv-export" onClick={scrollToSection}>{t("helpCsvExport")}</a></li>
+            <li><a href="#guide-settings" onClick={scrollToSection}>{t("helpSettings")}</a></li>
+            <li><a href="#guide-roles" onClick={scrollToSection}>{t("helpRoles")}</a></li>
+            <li><a href="#guide-tips" onClick={scrollToSection}>{t("helpTips")}</a></li>
           </ol>
         </nav>
 
