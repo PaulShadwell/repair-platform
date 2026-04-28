@@ -1,0 +1,387 @@
+/* ===========================
+   Skip to Content
+   =========================== */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 999;
+  padding: 0.75rem 1.25rem;
+  background: #1e3a5c;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 6px 0;
+  transition: top 150ms ease;
+}
+
+.skip-to-content:focus {
+  top: 0;
+}
+
+/* ===========================
+   Visually Hidden (SR-only)
+   =========================== */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ===========================
+   Spinner
+   =========================== */
+.spinner {
+  display: inline-block;
+  border: 2.5px solid #dde6f0;
+  border-top-color: #2a5d93;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.spinner-inline {
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Spinner inside buttons */
+button .spinner {
+  border-width: 2px;
+  border-color: rgba(255,255,255,0.3);
+  border-top-color: #fff;
+}
+
+/* Page-level centered spinner */
+.spinner-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 0.75rem;
+  color: #5f6f82;
+}
+
+/* ===========================
+   Skeleton
+   =========================== */
+.skeleton {
+  background: linear-gradient(90deg, #e8eef6 25%, #f0f4f9 50%, #e8eef6 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Skeleton variants */
+.skeleton-text {
+  height: 1em;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-heading {
+  height: 1.5em;
+  width: 60%;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+}
+
+.skeleton-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-row .skeleton {
+  flex: 1;
+}
+
+.skeleton-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* ===========================
+   Toast Improvements
+   =========================== */
+.toast {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.15);
+  animation: toast-slide-in 250ms ease;
+  max-width: min(440px, calc(100vw - 2rem));
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.toast-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.toast-info {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.toast-message {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.toast-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.toast-dismiss:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ===========================
+   Form Field Validation
+   =========================== */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.form-field.wide {
+  grid-column: span 2;
+}
+
+.form-field-label {
+  font-weight: 600;
+  color: #1e3a5c;
+}
+
+.form-field.has-error input,
+.form-field.has-error select,
+.form-field.has-error textarea {
+  border-color: #dc2626;
+  outline: 2px solid rgba(220, 38, 38, 0.15);
+  outline-offset: 0;
+}
+
+.form-field-error {
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 500;
+  margin-top: 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.form-field-error::before {
+  content: "!";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ===========================
+   Focus Improvements
+   =========================== */
+:focus-visible {
+  outline: 2px solid #2a5d93;
+  outline-offset: 2px;
+}
+
+/* Remove default focus ring for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Better focus for inputs */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: #2a5d93;
+  outline: 2px solid rgba(42, 93, 147, 0.2);
+  outline-offset: 0;
+}
+
+/* Focus ring for interactive cards/rows */
+.repairs-table tbody tr:focus-visible,
+.customer-history-row:focus-visible {
+  outline: 2px solid #2a5d93;
+  outline-offset: -2px;
+}
+
+/* ===========================
+   Modal Accessibility
+   =========================== */
+.modal-overlay {
+  animation: modal-fade-in 180ms ease;
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-dialog {
+  animation: modal-scale-in 200ms ease;
+}
+
+@keyframes modal-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-body {
+  margin: 0.75rem 0;
+}
+
+/* ===========================
+   Loading States for Lists
+   =========================== */
+.list-loading-overlay {
+  position: relative;
+}
+
+.list-loading-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.6);
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.list-loading-overlay.is-loading::after {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Upload progress indicator */
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  color: #5f6f82;
+  font-size: 0.88rem;
+}
+
+/* ===========================
+   Empty States
+   =========================== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: #718096;
+}
+
+.empty-state-icon {
+  color: #b8c6d8;
+  margin-bottom: 0.75rem;
+}
+
+.empty-state p {
+  margin: 0.25rem 0;
+}
+
+/* ===========================
+   Role-based nav simplification
+   =========================== */
+.nav-divider {
+  width: 1px;
+  height: 24px;
+  background: #dde6f0;
+  margin: 0 0.25rem;
+  align-self: center;
+}
+
+/* ===========================
+   Improved button states
+   =========================== */
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button:disabled .spinner {
+  border-top-color: currentColor;
+}
+
+/* Button with spinner */
+.btn-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
