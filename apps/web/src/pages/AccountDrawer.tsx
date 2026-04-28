@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { LogOut, Languages, UserCircle, Printer } from "lucide-react";
+import { LogOut, Languages, UserCircle, Printer, Sun, Moon, Monitor } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 
 export function AccountDrawer() {
@@ -17,6 +17,8 @@ export function AccountDrawer() {
     currentLang,
     logout,
     i18n,
+    theme,
+    setTheme,
   } = useAppContext();
 
   const { t } = useTranslation();
@@ -139,6 +141,38 @@ export function AccountDrawer() {
           >
             <Languages size={14} /> {currentLang.toUpperCase()}
           </button>
+          <div className="theme-toggle" role="radiogroup" aria-label={t("themeLabel", "Theme")}>
+            <button
+              type="button"
+              className={theme === "light" ? "active" : ""}
+              onClick={() => setTheme("light")}
+              aria-checked={theme === "light"}
+              role="radio"
+              title={t("themeLight", "Light")}
+            >
+              <Sun size={14} />
+            </button>
+            <button
+              type="button"
+              className={theme === "system" ? "active" : ""}
+              onClick={() => setTheme("system")}
+              aria-checked={theme === "system"}
+              role="radio"
+              title={t("themeSystem", "System")}
+            >
+              <Monitor size={14} />
+            </button>
+            <button
+              type="button"
+              className={theme === "dark" ? "active" : ""}
+              onClick={() => setTheme("dark")}
+              aria-checked={theme === "dark"}
+              role="radio"
+              title={t("themeDark", "Dark")}
+            >
+              <Moon size={14} />
+            </button>
+          </div>
           <button
             type="button"
             title={t("logout")}

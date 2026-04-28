@@ -270,6 +270,8 @@ export type AppContextValue = {
   setMobileView: React.Dispatch<React.SetStateAction<"list" | "detail">>;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  theme: "light" | "dark" | "system";
+  setTheme: (theme: "light" | "dark" | "system") => void;
   adminTab: "none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help";
   setAdminTab: React.Dispatch<React.SetStateAction<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help">>;
   showFunctionHub: boolean;
@@ -662,6 +664,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isMobile, setIsMobile] = useState<boolean>(() => window.innerWidth <= 900);
   const [mobileView, setMobileView] = useState<"list" | "detail">("list");
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+
+  // ---- Theme (dark mode) ----
+  const [theme, setThemeState] = useState<"light" | "dark" | "system">(() => {
+    try {
+      const stored = localStorage.getItem("repair-platform-theme");
+      if (stored === "light" || stored === "dark" || stored === "system") return stored;
+    } catch { /* ignore */ }
+    return "system";
+  });
+
+  function setTheme(next: "light" | "dark" | "system") {
+    setThemeState(next);
+    try { localStorage.setItem("repair-platform-theme", next); } catch { /* ignore */ }
+    if (next === "system") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", next);
+    }
+  }
+
+  // Apply theme on mount
+  useEffect(() => {
+    if (theme === "system") {
+      document.documentElement.removeAttribute("data-theme");
+    } else {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help">(
     "none",
   );
@@ -2773,6 +2803,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setMobileView,
     mobileMenuOpen,
     setMobileMenuOpen,
+    theme,
+    setTheme,
     adminTab,
     setAdminTab,
     showFunctionHub,

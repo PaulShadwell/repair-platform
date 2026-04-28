@@ -1,0 +1,207 @@
+:root {
+  /* -- Surface colors -- */
+  --color-bg: #fff;
+  --color-bg-subtle: #f7f9fc;
+  --color-bg-muted: #eef3f8;
+  --color-bg-card: #fff;
+  --color-bg-hover: #e8eef6;
+  --color-bg-active: #fff;
+  --color-bg-input: #fff;
+  --color-bg-overlay: rgba(17, 24, 39, 0.36);
+
+  /* -- Border colors -- */
+  --color-border: #cdd8e5;
+  --color-border-light: #dde6f0;
+  --color-border-input: #b8c6d8;
+  --color-border-focus: #2a5d93;
+
+  /* -- Text colors -- */
+  --color-text: #1a202c;
+  --color-text-secondary: #4f5f75;
+  --color-text-muted: #718096;
+  --color-text-heading: #1e3a5c;
+  --color-text-link: #235db6;
+  --color-text-on-primary: #fff;
+
+  /* -- Primary / brand -- */
+  --color-primary: #2a5d93;
+  --color-primary-hover: #244f7d;
+  --color-primary-light: #eef3ff;
+
+  /* -- Status colors -- */
+  --color-success: #1f7a47;
+  --color-success-bg: #ecfbf3;
+  --color-success-border: #b7e5c8;
+  --color-warning: #d69e2e;
+  --color-warning-bg: #fff7ea;
+  --color-error: #c53030;
+  --color-error-bg: #fff5f5;
+  --color-error-border: #e8a4a4;
+  --color-info: #2b6cb0;
+  --color-info-bg: #ebf8ff;
+
+  /* -- Status chips -- */
+  --color-chip-new-bg: #eef3ff;
+  --color-chip-new-text: #2d4a7a;
+  --color-chip-progress-bg: #ebf8ff;
+  --color-chip-progress-text: #2c5282;
+  --color-chip-ready-bg: #ecfbf3;
+  --color-chip-ready-text: #11633d;
+  --color-chip-completed-bg: #e6faf0;
+  --color-chip-completed-text: #1f7a47;
+  --color-chip-cancelled-bg: #fff5f5;
+  --color-chip-cancelled-text: #912e2e;
+
+  /* -- Shadows -- */
+  --shadow-card: 0 16px 36px rgba(35, 53, 77, 0.12);
+  --shadow-drawer: -8px 0 24px rgba(15, 23, 42, 0.15);
+  --shadow-toast: 0 4px 16px rgba(15, 23, 42, 0.15);
+
+  /* -- Focus -- */
+  --color-focus-ring: rgba(42, 93, 147, 0.2);
+
+  /* -- Misc -- */
+  --color-skeleton-from: #e8eef6;
+  --color-skeleton-via: #f0f4f9;
+  --color-bar-fill-status: #4e79a7;
+  --color-bar-fill-assignee: #59a14f;
+  --color-timeline-done: #1f7a47;
+  --color-timeline-active: #2a5d93;
+  --color-danger: #c53030;
+  --color-danger-bg: #fff5f5;
+  --color-danger-hover: #912e2e;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --color-bg: #1a1a2e;
+  --color-bg-subtle: #16213e;
+  --color-bg-muted: #1f2b47;
+  --color-bg-card: #1e2d4a;
+  --color-bg-hover: #253a5c;
+  --color-bg-active: #1e2d4a;
+  --color-bg-input: #162038;
+  --color-bg-overlay: rgba(0, 0, 0, 0.55);
+
+  --color-border: #2d4a7a;
+  --color-border-light: #253a5c;
+  --color-border-input: #3a5580;
+  --color-border-focus: #4299e1;
+
+  --color-text: #e2e8f0;
+  --color-text-secondary: #a0b0c0;
+  --color-text-muted: #8899aa;
+  --color-text-heading: #cbd9ff;
+  --color-text-link: #6ea0d4;
+  --color-text-on-primary: #fff;
+
+  --color-primary: #4299e1;
+  --color-primary-hover: #3182ce;
+  --color-primary-light: #1e2d4a;
+
+  --color-success: #86c07c;
+  --color-success-bg: #1a2e25;
+  --color-success-border: #2d5a3e;
+  --color-warning: #ecc94b;
+  --color-warning-bg: #2d2a1a;
+  --color-error: #fc8181;
+  --color-error-bg: #2e1a1a;
+  --color-error-border: #6b2a2a;
+  --color-info: #4299e1;
+  --color-info-bg: #1a2540;
+
+  --color-chip-new-bg: #1e2d4a;
+  --color-chip-new-text: #6ea0d4;
+  --color-chip-progress-bg: #1a2540;
+  --color-chip-progress-text: #4299e1;
+  --color-chip-ready-bg: #1a2e25;
+  --color-chip-ready-text: #86c07c;
+  --color-chip-completed-bg: #1a2e25;
+  --color-chip-completed-text: #a6e3c2;
+  --color-chip-cancelled-bg: #2e1a1a;
+  --color-chip-cancelled-text: #fc8181;
+
+  --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.3);
+  --shadow-drawer: -8px 0 24px rgba(0, 0, 0, 0.4);
+  --shadow-toast: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+  --color-focus-ring: rgba(66, 153, 225, 0.3);
+
+  --color-skeleton-from: #1f2b47;
+  --color-skeleton-via: #253a5c;
+  --color-bar-fill-status: #4299e1;
+  --color-bar-fill-assignee: #86c07c;
+  --color-timeline-done: #86c07c;
+  --color-timeline-active: #4299e1;
+  --color-danger: #fc8181;
+  --color-danger-bg: #2e1a1a;
+  --color-danger-hover: #e53e3e;
+}
+
+/* System preference auto-detect */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #1a1a2e;
+    --color-bg-subtle: #16213e;
+    --color-bg-muted: #1f2b47;
+    --color-bg-card: #1e2d4a;
+    --color-bg-hover: #253a5c;
+    --color-bg-active: #1e2d4a;
+    --color-bg-input: #162038;
+    --color-bg-overlay: rgba(0, 0, 0, 0.55);
+
+    --color-border: #2d4a7a;
+    --color-border-light: #253a5c;
+    --color-border-input: #3a5580;
+    --color-border-focus: #4299e1;
+
+    --color-text: #e2e8f0;
+    --color-text-secondary: #a0b0c0;
+    --color-text-muted: #8899aa;
+    --color-text-heading: #cbd9ff;
+    --color-text-link: #6ea0d4;
+    --color-text-on-primary: #fff;
+
+    --color-primary: #4299e1;
+    --color-primary-hover: #3182ce;
+    --color-primary-light: #1e2d4a;
+
+    --color-success: #86c07c;
+    --color-success-bg: #1a2e25;
+    --color-success-border: #2d5a3e;
+    --color-warning: #ecc94b;
+    --color-warning-bg: #2d2a1a;
+    --color-error: #fc8181;
+    --color-error-bg: #2e1a1a;
+    --color-error-border: #6b2a2a;
+    --color-info: #4299e1;
+    --color-info-bg: #1a2540;
+
+    --color-chip-new-bg: #1e2d4a;
+    --color-chip-new-text: #6ea0d4;
+    --color-chip-progress-bg: #1a2540;
+    --color-chip-progress-text: #4299e1;
+    --color-chip-ready-bg: #1a2e25;
+    --color-chip-ready-text: #86c07c;
+    --color-chip-completed-bg: #1a2e25;
+    --color-chip-completed-text: #a6e3c2;
+    --color-chip-cancelled-bg: #2e1a1a;
+    --color-chip-cancelled-text: #fc8181;
+
+    --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.3);
+    --shadow-drawer: -8px 0 24px rgba(0, 0, 0, 0.4);
+    --shadow-toast: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+    --color-focus-ring: rgba(66, 153, 225, 0.3);
+
+    --color-skeleton-from: #1f2b47;
+    --color-skeleton-via: #253a5c;
+    --color-bar-fill-status: #4299e1;
+    --color-bar-fill-assignee: #86c07c;
+    --color-timeline-done: #86c07c;
+    --color-timeline-active: #4299e1;
+    --color-danger: #fc8181;
+    --color-danger-bg: #2e1a1a;
+    --color-danger-hover: #e53e3e;
+  }
+}

@@ -4,6 +4,6 @@
 
 body {
   margin: 0;
-  background: #f2f3f5;
-  color: #222;
+  background: var(--color-bg-subtle, #f2f3f5);
+  color: var(--color-text, #222);
 }

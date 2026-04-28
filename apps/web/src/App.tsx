@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
+import "./theme.css";
 import "./App.css";
 import "./components/ui.css";
 
@@ -23,6 +24,7 @@ import { FunctionHub } from "./pages/FunctionHub";
 import { RepairList } from "./pages/RepairList";
 import { RepairDetail } from "./pages/RepairDetail";
 import UserGuide from "./UserGuide";
+import { MobileNav } from "./components/MobileNav";
 
 function AppInner() {
   const { t } = useTranslation();
@@ -53,6 +55,7 @@ function AppInner() {
     isAdmin,
     canCreateRepair,
     canManageUsers,
+    isMobile,
   } = ctx;
 
   // ---- Unauthenticated: login screen ----
@@ -207,6 +210,8 @@ function AppInner() {
       >
         <p>{t("unsavedChangesMessage")}</p>
       </Modal>
+
+      {isMobile && <MobileNav />}
     </main>
   );
 }

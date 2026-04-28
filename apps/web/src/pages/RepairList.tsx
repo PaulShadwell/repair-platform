@@ -1,6 +1,15 @@
+import { useState, useEffect, useRef } from "react";
 import { Skeleton } from "../components/Skeleton";
 import { X, Search } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+
+const STATUS_CHIPS = [
+  { label: "New", status: "NEW" },
+  { label: "In Progress", status: "IN_PROGRESS" },
+  { label: "Waiting Parts", status: "WAITING_PARTS" },
+  { label: "Ready", status: "READY_FOR_PICKUP" },
+  { label: "Notify Customer", status: "NOTIFY_CUSTOMER" },
+] as const;
 
 export function RepairList() {
   const {
@@ -30,6 +39,52 @@ export function RepairList() {
     canToggleCustomerNotified,
     setCustomerNotified,
   } = useAppContext();
+
+  // --- Search-as-you-type with debounce ---
+  const [searchDraft, setSearchDraft] = useState(searchText);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep searchDraft in sync when searchText is cleared externally
+  useEffect(() => {
+    setSearchDraft(searchText);
+  }, [searchText]);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (searchDraft !== searchText) {
+        setSearchText(searchDraft);
+        void loadRepairs(scope, searchDraft, 1, sort, viewMode, false, listFilters);
+      }
+    }, 350);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchDraft]);
+
+  // --- Filter chips ---
+  const [activeChipStatus, setActiveChipStatus] = useState<string | null>(null);
+
+  function handleChipClick(status: string) {
+    guardUnsavedChanges(() => {
+      if (activeChipStatus === status) {
+        // Toggle off
+        setActiveChipStatus(null);
+        void loadRepairs(scope, searchText, 1, sort, viewMode, false, {});
+      } else {
+        setActiveChipStatus(status);
+        void loadRepairs(scope, searchText, 1, sort, viewMode, false, { status });
+      }
+    });
+  }
+
+  function handleChipClear() {
+    guardUnsavedChanges(() => {
+      setActiveChipStatus(null);
+      void loadRepairs(scope, searchText, 1, sort, viewMode, false, {});
+    });
+  }
 
   function ariaSortValue(column: string): "ascending" | "descending" | "none" {
     if (sort.sortBy !== column) return "none";
@@ -63,18 +118,24 @@ export function RepairList() {
       <div className="search-bar">
         <input
           placeholder={`${t("search")}...`}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
+          value={searchDraft}
+          onChange={(e) => setSearchDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") guardUnsavedChanges(() => void loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters));
+            if (e.key === "Enter") {
+              if (debounceRef.current) clearTimeout(debounceRef.current);
+              setSearchText(searchDraft);
+              guardUnsavedChanges(() => void loadRepairs(scope, searchDraft, 1, sort, viewMode, false, listFilters));
+            }
           }}
         />
         <button
           type="button"
           title={t("clearSearch")}
           aria-label={t("clearSearch")}
-          disabled={!searchText.trim()}
+          disabled={!searchDraft.trim()}
           onClick={() => guardUnsavedChanges(() => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            setSearchDraft("");
             setSearchText("");
             void loadRepairs(scope, "", 1, sort, viewMode, false, listFilters);
           })}
@@ -84,10 +145,37 @@ export function RepairList() {
         <button
           title={t("search")}
           aria-label={t("search")}
-          onClick={() => guardUnsavedChanges(() => void loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters))}
+          onClick={() => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            setSearchText(searchDraft);
+            guardUnsavedChanges(() => void loadRepairs(scope, searchDraft, 1, sort, viewMode, false, listFilters));
+          }}
         >
           <Search size={14} />
         </button>
+      </div>
+
+      <div className="filter-chips" role="group" aria-label="Status filters">
+        {STATUS_CHIPS.map((chip) => (
+          <button
+            key={chip.status}
+            type="button"
+            className={`filter-chip${activeChipStatus === chip.status ? " active" : ""}`}
+            onClick={() => handleChipClick(chip.status)}
+            aria-pressed={activeChipStatus === chip.status}
+          >
+            {chip.label}
+          </button>
+        ))}
+        {activeChipStatus && (
+          <button
+            type="button"
+            className="filter-chip filter-chip-clear"
+            onClick={handleChipClear}
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       <p className="field-help">{t("listKeyboardHint")}</p>

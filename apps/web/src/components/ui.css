@@ -7,8 +7,8 @@
   left: 0;
   z-index: 999;
   padding: 0.75rem 1.25rem;
-  background: #1e3a5c;
-  color: #fff;
+  background: var(--color-text-heading);
+  color: var(--color-text-on-primary);
   font-weight: 600;
   text-decoration: none;
   border-radius: 0 0 6px 0;
@@ -39,8 +39,8 @@
    =========================== */
 .spinner {
   display: inline-block;
-  border: 2.5px solid #dde6f0;
-  border-top-color: #2a5d93;
+  border: 2.5px solid var(--color-border-light);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -58,7 +58,7 @@
 button .spinner {
   border-width: 2px;
   border-color: rgba(255,255,255,0.3);
-  border-top-color: #fff;
+  border-top-color: var(--color-text-on-primary);
 }
 
 /* Page-level centered spinner */
@@ -68,14 +68,14 @@ button .spinner {
   justify-content: center;
   padding: 3rem;
   gap: 0.75rem;
-  color: #5f6f82;
+  color: var(--color-text-muted);
 }
 
 /* ===========================
    Skeleton
    =========================== */
 .skeleton {
-  background: linear-gradient(90deg, #e8eef6 25%, #f0f4f9 50%, #e8eef6 75%);
+  background: linear-gradient(90deg, var(--color-skeleton-from) 25%, var(--color-skeleton-via) 50%, var(--color-skeleton-from) 75%);
   background-size: 200% 100%;
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
@@ -130,7 +130,7 @@ button .spinner {
   border-radius: 8px;
   font-size: 0.92rem;
   font-weight: 500;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--shadow-toast);
   animation: toast-slide-in 250ms ease;
   max-width: min(440px, calc(100vw - 2rem));
 }
@@ -147,21 +147,21 @@ button .spinner {
 }
 
 .toast-success {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid var(--color-success-border);
 }
 
 .toast-error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border: 1px solid var(--color-error-border);
 }
 
 .toast-info {
-  background: #eff6ff;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border: 1px solid var(--color-border-focus);
 }
 
 .toast-message {
@@ -205,19 +205,19 @@ button .spinner {
 
 .form-field-label {
   font-weight: 600;
-  color: #1e3a5c;
+  color: var(--color-text-heading);
 }
 
 .form-field.has-error input,
 .form-field.has-error select,
 .form-field.has-error textarea {
-  border-color: #dc2626;
+  border-color: var(--color-error);
   outline: 2px solid rgba(220, 38, 38, 0.15);
   outline-offset: 0;
 }
 
 .form-field-error {
-  color: #dc2626;
+  color: var(--color-error);
   font-size: 0.82rem;
   font-weight: 500;
   margin-top: 0.15rem;
@@ -234,8 +234,8 @@ button .spinner {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #dc2626;
-  color: #fff;
+  background: var(--color-error);
+  color: var(--color-text-on-primary);
   font-size: 0.7rem;
   font-weight: 700;
   flex-shrink: 0;
@@ -245,7 +245,7 @@ button .spinner {
    Focus Improvements
    =========================== */
 :focus-visible {
-  outline: 2px solid #2a5d93;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -258,15 +258,15 @@ button .spinner {
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  border-color: #2a5d93;
-  outline: 2px solid rgba(42, 93, 147, 0.2);
+  border-color: var(--color-border-focus);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 0;
 }
 
 /* Focus ring for interactive cards/rows */
 .repairs-table tbody tr:focus-visible,
 .customer-history-row:focus-visible {
-  outline: 2px solid #2a5d93;
+  outline: 2px solid var(--color-primary);
   outline-offset: -2px;
 }
 
@@ -330,7 +330,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0;
-  color: #5f6f82;
+  color: var(--color-text-muted);
   font-size: 0.88rem;
 }
 
@@ -344,11 +344,11 @@ textarea:focus-visible {
   justify-content: center;
   padding: 2.5rem 1.5rem;
   text-align: center;
-  color: #718096;
+  color: var(--color-text-muted);
 }
 
 .empty-state-icon {
-  color: #b8c6d8;
+  color: var(--color-border-input);
   margin-bottom: 0.75rem;
 }
 
@@ -362,7 +362,7 @@ textarea:focus-visible {
 .nav-divider {
   width: 1px;
   height: 24px;
-  background: #dde6f0;
+  background: var(--color-border-light);
   margin: 0 0.25rem;
   align-self: center;
 }
@@ -384,4 +384,355 @@ button:disabled .spinner {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+/* ===========================
+   Filter Chips
+   =========================== */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--color-border, #cdd8e5);
+  border-radius: 999px;
+  background: var(--color-bg-card, #fff);
+  color: var(--color-text-secondary, #4f5f75);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms ease;
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  background: var(--color-bg-hover, #e8eef6);
+  border-color: var(--color-primary, #2a5d93);
+}
+
+.filter-chip.active {
+  background: var(--color-primary, #2a5d93);
+  color: var(--color-text-on-primary, #fff);
+  border-color: var(--color-primary, #2a5d93);
+}
+
+.filter-chip-clear {
+  border-style: dashed;
+  color: var(--color-text-muted, #718096);
+}
+
+.filter-chip-clear:hover {
+  border-style: solid;
+  color: var(--color-error, #c53030);
+  border-color: var(--color-error, #c53030);
+}
+
+/* ===========================
+   Page Transitions
+   =========================== */
+.admin-tab-content {
+  animation: fade-slide-in 200ms ease;
+}
+
+.function-hub-card {
+  animation: fade-slide-in 200ms ease;
+}
+
+.profile-page {
+  animation: fade-slide-in 200ms ease;
+}
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===========================
+   Card hover effects
+   =========================== */
+.function-hub-actions button {
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.function-hub-actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.function-hub-actions button:active {
+  transform: translateY(0);
+}
+
+/* ===========================
+   Status chip micro-animations
+   =========================== */
+.status-chip {
+  transition: background 200ms ease, color 200ms ease;
+}
+
+/* ===========================
+   Table row transitions
+   =========================== */
+.repairs-table tbody tr {
+  transition: background 120ms ease;
+}
+
+.repairs-table tbody tr:hover {
+  cursor: pointer;
+}
+
+/* ===========================
+   Improved Empty States
+   =========================== */
+.empty-state {
+  animation: fade-in 300ms ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.empty-state-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #4f5f75);
+  margin-bottom: 0.25rem;
+}
+
+.empty-state-description {
+  font-size: 0.88rem;
+  color: var(--color-text-muted, #718096);
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+/* ===========================
+   Smooth detail panel transitions
+   =========================== */
+.detail-section {
+  transition: opacity 200ms ease;
+}
+
+.detail-meta-chips {
+  animation: fade-slide-in 200ms ease;
+}
+
+/* ===========================
+   Photo gallery improvements
+   =========================== */
+.photo-card {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.photo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.photo-card-image img {
+  transition: opacity 200ms ease;
+}
+
+/* ===========================
+   Dashboard chart improvements
+   =========================== */
+.bar-fill {
+  transition: width 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bar-row.clickable {
+  transition: background 120ms ease;
+}
+
+.bar-row.clickable:hover {
+  background: var(--color-bg-hover, #e8eef6);
+  border-radius: 4px;
+}
+
+.metric-grid > div {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.metric-grid > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* ===========================
+   Button press effect
+   =========================== */
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* ===========================
+   Repair timeline animation
+   =========================== */
+.timeline-dot {
+  transition: background 300ms ease, border-color 300ms ease, transform 300ms ease;
+}
+
+.timeline-step.done .timeline-dot {
+  animation: timeline-pop 300ms ease;
+}
+
+@keyframes timeline-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.timeline-line {
+  transition: background 500ms ease;
+}
+
+/* ===========================
+   Onboarding hint / tooltip
+   =========================== */
+.onboarding-hint {
+  position: relative;
+  padding: 0.75rem 1rem;
+  background: var(--color-primary-light, #eef3ff);
+  border: 1px solid var(--color-border, #cdd8e5);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: var(--color-text-secondary, #4f5f75);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  animation: fade-slide-in 300ms ease;
+}
+
+.onboarding-hint-icon {
+  flex-shrink: 0;
+  color: var(--color-primary, #2a5d93);
+}
+
+.onboarding-hint-dismiss {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #718096);
+  cursor: pointer;
+  padding: 0.15rem;
+}
+
+.onboarding-hint-dismiss:hover {
+  color: var(--color-text, #1a202c);
+}
+
+/* ===========================
+   Smooth scrolling
+   =========================== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ===========================
+   Selection color
+   =========================== */
+::selection {
+  background: var(--color-primary, #2a5d93);
+  color: var(--color-text-on-primary, #fff);
+}
+
+/* ===========================
+   Mobile Bottom Navigation
+   =========================== */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: var(--color-bg-card, #fff);
+  border-top: 1px solid var(--color-border, #cdd8e5);
+  padding: 0.4rem 0 calc(0.4rem + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.35rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted, #718096);
+  font-size: 0.68rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 120ms ease, background 120ms ease;
+  min-width: 56px;
+}
+
+.mobile-nav-item:active {
+  background: var(--color-bg-hover, #e8eef6);
+}
+
+.mobile-nav-item.active {
+  color: var(--color-primary, #2a5d93);
+  font-weight: 600;
+}
+
+.mobile-nav-item svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Add bottom padding to main content on mobile to account for bottom nav */
+@media (max-width: 900px) {
+  .container {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Better touch targets on mobile */
+  .repairs-table tbody td {
+    padding: 0.7rem 0.5rem;
+  }
+
+  .header-actions > button {
+    padding: 0.65rem 1rem;
+    font-size: 0.92rem;
+  }
+
+  /* Larger tap targets for buttons */
+  button, .btn-primary, .add-repair-submit {
+    min-height: 44px;
+  }
+
+  /* Better mobile form inputs */
+  input, select, textarea {
+    font-size: 16px; /* prevents iOS zoom on focus */
+    min-height: 44px;
+  }
+
+  /* Swipe hint on repair list */
+  .mobile-swipe-hint {
+    text-align: center;
+    padding: 0.5rem;
+    color: var(--color-text-muted, #718096);
+    font-size: 0.8rem;
+  }
 }
