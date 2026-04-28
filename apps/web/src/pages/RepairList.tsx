@@ -33,7 +33,7 @@ export function RepairList() {
 
   function ariaSortValue(column: string): "ascending" | "descending" | "none" {
     if (sort.sortBy !== column) return "none";
-    return sort.sortOrder === "asc" ? "ascending" : "descending";
+    return sort.sortDir === "asc" ? "ascending" : "descending";
   }
 
   const showEmptyState = !isLoading && repairs.length === 0;

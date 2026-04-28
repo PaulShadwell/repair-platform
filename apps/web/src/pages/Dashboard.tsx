@@ -13,7 +13,6 @@ export function Dashboard() {
     setShowFunctionHub,
     loadRepairs,
     sort,
-    searchText,
   } = useAppContext();
 
   return (

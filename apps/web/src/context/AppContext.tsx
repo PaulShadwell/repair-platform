@@ -522,7 +522,7 @@ export type AppContextValue = {
   printerStatusBadgeClass: (value: PrinterProfile["printerStatus"]) => string;
   formatChangeType: (changeType: string) => string;
   formatTelHref: (value: string | null | undefined) => string | null;
-  renderExpandableValue: (fieldKey: string, value: string | null | undefined) => JSX.Element;
+  renderExpandableValue: (fieldKey: string, value: string | null | undefined) => React.ReactNode;
   calculatePercent: (value: number, max: number) => number;
   activeFilterLabel: () => string | null;
   sortIndicator: (sortBy: string) => string;
@@ -550,7 +550,7 @@ export type AppContextValue = {
   clearLinkedCustomer: () => void;
   resetNewRepairForm: () => void;
   handleRepairListKeyNav: (event: ReactKeyboardEvent<HTMLElement>) => void;
-  renderPagination: () => JSX.Element;
+  renderPagination: () => React.ReactNode;
   dateInputTodayLocal: () => string;
 };
 

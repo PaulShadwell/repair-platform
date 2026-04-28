@@ -42,7 +42,6 @@ function AppInner() {
     showFunctionHub,
     canUseFunctionHub,
     hideRepairWorkspace,
-    isMobile,
     showCsvExportDialog,
     setShowCsvExportDialog,
     csvExportType,
@@ -52,7 +51,6 @@ function AppInner() {
     showUnsavedDialog,
     setShowUnsavedDialog,
     isAdmin,
-    showAdminTools,
     canCreateRepair,
     canManageUsers,
   } = ctx;

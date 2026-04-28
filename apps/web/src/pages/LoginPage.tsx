@@ -3,8 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useAppContext } from "../context/AppContext";
 import { Spinner } from "../components/Spinner";
 import { FormField } from "../components/FormField";
-import { Toast } from "../components/Toast";
-
 export function LoginPage() {
   const {
     brandLogoSrc,
@@ -17,7 +15,6 @@ export function LoginPage() {
     setForgotPasswordForm,
     message,
     messageType,
-    showToast,
     login,
     requestPasswordReset,
     resetPasswordWithToken,

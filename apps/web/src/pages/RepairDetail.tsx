@@ -151,7 +151,6 @@ export function RepairDetail() {
   const {
     t,
     selectedRepair,
-    selectedRepairId,
     isMobile,
     mobileView,
     setMobileView,
@@ -174,7 +173,6 @@ export function RepairDetail() {
     setRepairWorkForm,
     showThermalPreview,
     setShowThermalPreview,
-    showUnsavedDialog,
     setShowUnsavedDialog,
     translatedContent,
     photoPreviewUrls,
@@ -202,7 +200,6 @@ export function RepairDetail() {
     formatRepairRef,
     formatCustomerFullName,
     formatStatus,
-    statusChipClass,
     formatDisplayDate,
     formatDisplayDateTime,
     formatArticleType,
@@ -212,7 +209,6 @@ export function RepairDetail() {
     intakeEditHint,
     outcomeEditHint,
     canEditRepairWork,
-    setCustomerNotified,
   } = useAppContext();
 
   // -- Local validation state --
