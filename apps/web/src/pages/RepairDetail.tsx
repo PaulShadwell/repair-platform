@@ -296,13 +296,6 @@ export function RepairDetail() {
       className={`card detail detail-tabbed ${isMobile && mobileView === "list" ? "mobile-hidden" : ""}`}
       aria-label={t("repairDetail")}
     >
-      {/* ---- Mobile back button ---- */}
-      {isMobile && (
-        <button className="mobile-back-button" onClick={() => setMobileView("list")}>
-          <ArrowLeft size={14} /> {t("backToList")}
-        </button>
-      )}
-
       {/* ================================================================== */}
       {/* STICKY HEADER                                                       */}
       {/* ================================================================== */}

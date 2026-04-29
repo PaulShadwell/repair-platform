@@ -809,7 +809,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const canUseFunctionHub = canCreateRepair;
   const canViewArchivedItems = canCreateRepair;
   const canEditRepairFields = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER"));
-  const canEditIntakeFields = canCreateRepair || canEditRepairFields;
+  const canEditIntakeFields = canEditCustomerIntake;
   const canEditOutcomeFields = canEditRepairFields || canCreateRepair;
   const canAssignRepairs = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER" || role === "POS_USER"));
   const canManageMaterials = canEditRepairFields;
@@ -1122,6 +1122,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   function openRepairDetail(repairId: string): void {
     if (repairId === selectedRepairId) {
+      // On mobile, still switch to detail view even if the same repair is selected
+      if (isMobile) setMobileView("detail");
       return;
     }
     guardUnsavedChanges(() => {

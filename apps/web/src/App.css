@@ -1533,11 +1533,9 @@ button:hover {
 }
 
 .repair-timeline.compact .timeline-substatus {
-  flex-basis: auto;
-  margin-left: 0;
-  margin-top: 0.25rem;
-  align-self: center;
-  text-align: center;
+  margin: 0.35rem auto 0;
+  width: auto;
+  flex: none;
 }
 
 /* ── Tab bar ── */
@@ -2380,12 +2378,7 @@ button {
   }
 
   .detail-header-actions {
-    gap: 0.3rem;
-  }
-
-  .detail-header-actions button {
-    font-size: 0.75rem;
-    padding: 0.35rem 0.5rem;
+    display: none;
   }
 
   .repair-timeline.compact .timeline-dot {
@@ -2464,8 +2457,9 @@ button {
 
   .timeline-substatus {
     position: static;
-    margin-top: 8px;
-    width: 100%;
+    margin: 8px auto 0;
+    width: fit-content;
+    flex-basis: 100%;
     text-align: center;
   }
 
@@ -2479,10 +2473,6 @@ button {
   .mobile-back-button,
   .header-actions.mobile-actions > button {
     min-height: 44px;
-  }
-
-  .detail-header-actions {
-    width: 100%;
   }
 }
 
