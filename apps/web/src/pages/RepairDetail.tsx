@@ -12,11 +12,21 @@ import {
   Upload,
   Receipt,
   X,
+  ClipboardList,
+  Wrench,
+  Package,
+  Camera,
+  History,
 } from "lucide-react";
 import { ThermalLabelPreview } from "../components/ThermalLabelPreview";
 import { useAppContext } from "../context/AppContext";
 import type { InventoryItem } from "../types";
 import { api } from "../api";
+
+// ---------------------------------------------------------------------------
+// Tab types
+// ---------------------------------------------------------------------------
+type DetailTab = "details" | "work" | "parts" | "photos" | "history";
 
 // ---------------------------------------------------------------------------
 // MaterialAddRow (tightly coupled to RepairDetail)
@@ -211,22 +221,19 @@ export function RepairDetail() {
     canEditRepairWork,
   } = useAppContext();
 
+  // -- Active tab --
+  const [activeTab, setActiveTab] = useState<DetailTab>("details");
+
   // -- Local validation state --
   const [emailError, setEmailError] = useState<string | null>(null);
   const [outcomeWarning, setOutcomeWarning] = useState<string | null>(null);
 
-  // -- Expandable sections --
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    intake: true,
-    outcome: true,
-    materials: true,
-    history: true,
-    photos: true,
-  });
-
-  function toggleSection(key: string) {
-    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  }
+  // Reset tab when a different repair is selected
+  useEffect(() => {
+    setActiveTab("details");
+    setEmailError(null);
+    setOutcomeWarning(null);
+  }, [selectedRepair?.id]);
 
   // -- Inline email validation --
   function handleEmailChange(value: string) {
@@ -264,9 +271,29 @@ export function RepairDetail() {
     );
   }
 
+  // -- Timeline rendering --
+  const timelineSteps = [
+    { key: "NEW", label: t("timelineNew") },
+    { key: "IN_PROGRESS", label: t("timelineInProgress") },
+    { key: "READY_FOR_PICKUP", label: t("timelineReady") },
+    { key: "COMPLETED", label: t("timelineCompleted") },
+  ];
+  const statusOrder = ["NEW", "IN_PROGRESS", "WAITING_PARTS", "NOTIFY_CUSTOMER", "READY_FOR_PICKUP", "COMPLETED"];
+  const currentIdx = statusOrder.indexOf(selectedRepair.status);
+  const isCancelled = selectedRepair.status === "CANCELLED";
+
+  // -- Tab definitions with counts --
+  const tabs: { key: DetailTab; label: string; icon: React.ReactNode; count?: number }[] = [
+    { key: "details", label: t("tabDetails", "Details"), icon: <ClipboardList size={14} /> },
+    { key: "work", label: t("tabWork", "Work"), icon: <Wrench size={14} /> },
+    { key: "parts", label: t("tabParts", "Parts"), icon: <Package size={14} />, count: repairMaterials.length },
+    { key: "photos", label: t("tabPhotos", "Photos"), icon: <Camera size={14} />, count: selectedRepair.photos.length },
+    { key: "history", label: t("tabHistory", "History"), icon: <History size={14} />, count: repairChangeHistory.length },
+  ];
+
   return (
     <article
-      className={`card detail ${isMobile && mobileView === "list" ? "mobile-hidden" : ""}`}
+      className={`card detail detail-tabbed ${isMobile && mobileView === "list" ? "mobile-hidden" : ""}`}
       aria-label={t("repairDetail")}
     >
       {/* ---- Mobile back button ---- */}
@@ -276,142 +303,156 @@ export function RepairDetail() {
         </button>
       )}
 
-      {/* ---- Detail header row ---- */}
-      <div className="detail-header-row">
-        <h2>{t("repairDetail")}</h2>
-        <div className="detail-header-actions">
-          {assignees.length > 0 && canAssignRepairs && (
-            <select
-              className="detail-assign-select"
-              value=""
-              aria-label={t("assignToRepairer")}
-              onChange={(e) => {
-                if (e.target.value) void updateAssignment(selectedRepair.id, e.target.value);
-              }}
-            >
-              <option value="" disabled>
-                {t("assignToRepairer")}
-              </option>
-              {assignees.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.fullName}
-                </option>
-              ))}
-            </select>
-          )}
-          {canPrintFromDetail && (
-            <button
-              disabled={busyActions.printLabel}
-              onClick={() => void printLabel(selectedRepair.id)}
-              aria-label={t("printLabel")}
-            >
-              <Printer size={14} /> {busyActions.printLabel ? t("loadingPrintLabel") : t("printLabel")}
-            </button>
-          )}
-          <button type="button" onClick={() => printRepairA4(selectedRepair)} aria-label={t("printA4")}>
-            <FileText size={14} /> {t("printA4")}
-          </button>
-          {canToggleLabelSimulation && (
-            <button type="button" onClick={() => setShowThermalPreview((prev) => !prev)}>
-              {showThermalPreview ? t("hideSimulationLabel") : t("showSimulationLabel")}
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              className="button-danger"
-              disabled={busyActions.deleteRepair}
-              onClick={() => void deleteRepair(selectedRepair.id)}
-              aria-label={t("deleteRepair")}
-            >
-              <Trash2 size={14} /> {busyActions.deleteRepair ? t("loadingDeleteRepair") : t("deleteRepair")}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ---- Detail meta chips ---- */}
-      <div className="detail-meta-chips">
-        <span className="detail-chip">
-          <strong>{t("reference")}:</strong> {formatRepairRef(selectedRepair)}
-        </span>
-        <span className="detail-chip">
-          <strong>{t("assigned")}:</strong> {selectedRepair.assignedToUser?.fullName ?? t("unassigned")}
-        </span>
-        <span className="detail-chip">
-          <strong>{t("customerNotified")}:</strong> {selectedRepair.notified ? t("yes") : t("no")}
-        </span>
-      </div>
-
-      {/* ---- Repair timeline ---- */}
-      {(() => {
-        const steps = [
-          { key: "NEW", label: t("timelineNew") },
-          { key: "IN_PROGRESS", label: t("timelineInProgress") },
-          { key: "READY_FOR_PICKUP", label: t("timelineReady") },
-          { key: "COMPLETED", label: t("timelineCompleted") },
-        ];
-        const statusOrder = ["NEW", "IN_PROGRESS", "WAITING_PARTS", "NOTIFY_CUSTOMER", "READY_FOR_PICKUP", "COMPLETED"];
-        const currentIdx = statusOrder.indexOf(selectedRepair.status);
-        const isCancelled = selectedRepair.status === "CANCELLED";
-        return (
-          <div className={`repair-timeline${isCancelled ? " cancelled" : ""}`}>
-            {steps.map((step, i) => {
-              const stepIdx = statusOrder.indexOf(step.key);
-              const isActive =
-                step.key === selectedRepair.status ||
-                (selectedRepair.status === "WAITING_PARTS" && step.key === "IN_PROGRESS") ||
-                (selectedRepair.status === "NOTIFY_CUSTOMER" && step.key === "IN_PROGRESS");
-              const isDone = !isCancelled && currentIdx > stepIdx;
-              return (
-                <div key={step.key} className={`timeline-step${isDone ? " done" : ""}${isActive ? " active" : ""}`}>
-                  <div className="timeline-dot">
-                    {isDone ? (
-                      <span className="timeline-check">&#10003;</span>
-                    ) : (
-                      <span className="timeline-num">{i + 1}</span>
-                    )}
-                  </div>
-                  {i < steps.length - 1 && <div className={`timeline-line${isDone ? " done" : ""}`} />}
-                  <span className="timeline-label">{step.label}</span>
-                </div>
-              );
-            })}
-            {(selectedRepair.status === "WAITING_PARTS" || selectedRepair.status === "NOTIFY_CUSTOMER") && (
-              <span className="timeline-substatus">
-                {formatStatus(selectedRepair.status, selectedRepair.notified ?? false)}
-              </span>
-            )}
-            {isCancelled && <span className="timeline-substatus cancelled">{t("statusCancelled")}</span>}
+      {/* ================================================================== */}
+      {/* STICKY HEADER                                                       */}
+      {/* ================================================================== */}
+      <div className="detail-sticky-header">
+        {/* Top row: title + actions */}
+        <div className="detail-header-row">
+          <div className="detail-header-info">
+            <h2>{formatRepairRef(selectedRepair)}</h2>
+            <span className="detail-header-item">{selectedRepair.itemName ?? t("noProduct")}</span>
+            <span className="detail-header-sep">·</span>
+            <span className="detail-header-customer">{formatCustomerFullName(selectedRepair)}</span>
           </div>
-        );
-      })()}
-
-      {/* ================================================================== */}
-      {/* Customer Intake Section                                            */}
-      {/* ================================================================== */}
-      <section className="detail-section" aria-expanded={expandedSections.intake}>
-        <div className="section-header-row">
-          <h3
-            onClick={() => toggleSection("intake")}
-            style={{ cursor: "pointer" }}
-            aria-expanded={expandedSections.intake}
-          >
-            {t("customerIntake")}
-          </h3>
-          {canEditCustomerIntake && !isEditingRepairIntake && (
-            <button
-              type="button"
-              onClick={() => setIsEditingRepairIntake(true)}
-              aria-label={t("editCustomerIntake")}
-            >
-              <Pencil size={14} /> {t("editCustomerIntake")}
+          <div className="detail-header-actions">
+            {assignees.length > 0 && canAssignRepairs && (
+              <select
+                className="detail-assign-select"
+                value=""
+                aria-label={t("assignToRepairer")}
+                onChange={(e) => {
+                  if (e.target.value) void updateAssignment(selectedRepair.id, e.target.value);
+                }}
+              >
+                <option value="" disabled>
+                  {t("assignToRepairer")}
+                </option>
+                {assignees.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.fullName}
+                  </option>
+                ))}
+              </select>
+            )}
+            {canPrintFromDetail && (
+              <button
+                disabled={busyActions.printLabel}
+                onClick={() => void printLabel(selectedRepair.id)}
+                aria-label={t("printLabel")}
+              >
+                <Printer size={14} /> {busyActions.printLabel ? t("loadingPrintLabel") : t("printLabel")}
+              </button>
+            )}
+            <button type="button" onClick={() => printRepairA4(selectedRepair)} aria-label={t("printA4")}>
+              <FileText size={14} /> {t("printA4")}
             </button>
-          )}
+            {canToggleLabelSimulation && (
+              <button type="button" onClick={() => setShowThermalPreview((prev) => !prev)}>
+                {showThermalPreview ? t("hideSimulationLabel") : t("showSimulationLabel")}
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                className="button-danger"
+                disabled={busyActions.deleteRepair}
+                onClick={() => void deleteRepair(selectedRepair.id)}
+                aria-label={t("deleteRepair")}
+              >
+                <Trash2 size={14} /> {busyActions.deleteRepair ? t("loadingDeleteRepair") : t("deleteRepair")}
+              </button>
+            )}
+          </div>
         </div>
-        <p className="section-hint">{intakeEditHint()}</p>
 
-        {expandedSections.intake && (
-          <>
+        {/* Meta chips */}
+        <div className="detail-meta-chips">
+          <span className="detail-chip">
+            <strong>{t("assigned")}:</strong> {selectedRepair.assignedToUser?.fullName ?? t("unassigned")}
+          </span>
+          <span className="detail-chip">
+            <strong>{t("customerNotified")}:</strong> {selectedRepair.notified ? t("yes") : t("no")}
+          </span>
+          <span className="detail-chip">
+            <strong>{t("status")}:</strong> {formatStatus(selectedRepair.status, selectedRepair.notified ?? false)}
+          </span>
+        </div>
+
+        {/* Compact timeline */}
+        <div className={`repair-timeline compact${isCancelled ? " cancelled" : ""}`}>
+          {timelineSteps.map((step, i) => {
+            const stepIdx = statusOrder.indexOf(step.key);
+            const isActive =
+              step.key === selectedRepair.status ||
+              (selectedRepair.status === "WAITING_PARTS" && step.key === "IN_PROGRESS") ||
+              (selectedRepair.status === "NOTIFY_CUSTOMER" && step.key === "IN_PROGRESS");
+            const isDone = !isCancelled && currentIdx > stepIdx;
+            return (
+              <div key={step.key} className={`timeline-step${isDone ? " done" : ""}${isActive ? " active" : ""}`}>
+                <div className="timeline-dot">
+                  {isDone ? (
+                    <span className="timeline-check">&#10003;</span>
+                  ) : (
+                    <span className="timeline-num">{i + 1}</span>
+                  )}
+                </div>
+                {i < timelineSteps.length - 1 && <div className={`timeline-line${isDone ? " done" : ""}`} />}
+                <span className="timeline-label">{step.label}</span>
+              </div>
+            );
+          })}
+          {(selectedRepair.status === "WAITING_PARTS" || selectedRepair.status === "NOTIFY_CUSTOMER") && (
+            <span className="timeline-substatus">
+              {formatStatus(selectedRepair.status, selectedRepair.notified ?? false)}
+            </span>
+          )}
+          {isCancelled && <span className="timeline-substatus cancelled">{t("statusCancelled")}</span>}
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* TAB BAR                                                             */}
+      {/* ================================================================== */}
+      <nav className="detail-tab-bar" role="tablist" aria-label={t("repairDetail")}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={`detail-tab${activeTab === tab.key ? " active" : ""}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+            {tab.count != null && tab.count > 0 && (
+              <span className="detail-tab-badge">{tab.count}</span>
+            )}
+          </button>
+        ))}
+      </nav>
+
+      {/* ================================================================== */}
+      {/* TAB CONTENT                                                         */}
+      {/* ================================================================== */}
+      <div className="detail-tab-content">
+
+        {/* ── Details Tab ── */}
+        {activeTab === "details" && (
+          <section aria-label={t("tabDetails", "Details")}>
+            <div className="section-header-row">
+              <h3>{t("customerIntake")}</h3>
+              {canEditCustomerIntake && !isEditingRepairIntake && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingRepairIntake(true)}
+                  aria-label={t("editCustomerIntake")}
+                >
+                  <Pencil size={14} /> {t("editCustomerIntake")}
+                </button>
+              )}
+            </div>
+            <p className="section-hint">{intakeEditHint()}</p>
+
             {isEditingRepairIntake ? (
               <>
                 <h4 className="intake-subsection-title">{t("sectionCustomerDetails")}</h4>
@@ -508,9 +549,11 @@ export function RepairDetail() {
                     />
                   </label>
                 </div>
-                <div className="repair-work-actions">
+
+                {/* Sticky action bar for edit mode */}
+                <div className="detail-action-bar">
                   <button disabled={busyActions.saveRepairIntake} onClick={() => void saveRepairIntake(selectedRepair.id)}>
-                    {busyActions.saveRepairIntake ? t("loadingSaveCustomerIntake") : t("saveCustomerIntake")}
+                    <Save size={14} /> {busyActions.saveRepairIntake ? t("loadingSaveCustomerIntake") : t("saveCustomerIntake")}
                   </button>
                   <button
                     type="button"
@@ -532,35 +575,34 @@ export function RepairDetail() {
               </>
             ) : (
               <>
-                <h4 className="intake-subsection-title">{t("sectionCustomerDetails")}</h4>
-                <dl className="detail-grid">
-                  <div>
-                    <dt>{t("fullName")}</dt>
-                    <dd>{formatCustomerFullName(selectedRepair)}</dd>
+                {/* Customer card */}
+                <div className="customer-summary-card">
+                  <div className="customer-summary-name">{formatCustomerFullName(selectedRepair)}</div>
+                  <div className="customer-summary-row">
+                    {selectedRepair.streetAddress && (
+                      <span>{selectedRepair.streetAddress}</span>
+                    )}
+                    {selectedRepair.city && <span>{selectedRepair.city}</span>}
                   </div>
-                  <div>
-                    <dt>{t("customerStreetAddress")}</dt>
-                    <dd>{selectedRepair.streetAddress ?? "-"}</dd>
+                  <div className="customer-summary-row">
+                    {selectedRepair.email && (
+                      <a href={`mailto:${selectedRepair.email}`} className="customer-contact-link">
+                        {selectedRepair.email}
+                      </a>
+                    )}
+                    {(() => {
+                      const phoneHref = formatTelHref(selectedRepair.phone);
+                      if (!phoneHref || !selectedRepair.phone) return null;
+                      return (
+                        <a href={phoneHref} className="customer-contact-link">
+                          {selectedRepair.phone}
+                        </a>
+                      );
+                    })()}
                   </div>
-                  <div>
-                    <dt>{t("customerCity")}</dt>
-                    <dd>{selectedRepair.city ?? "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("customerEmail")}</dt>
-                    <dd>{selectedRepair.email ?? "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("customerPhone")}</dt>
-                    <dd>
-                      {(() => {
-                        const phoneHref = formatTelHref(selectedRepair.phone);
-                        if (!phoneHref || !selectedRepair.phone) return selectedRepair.phone ?? "-";
-                        return <a href={phoneHref}>{selectedRepair.phone}</a>;
-                      })()}
-                    </dd>
-                  </div>
-                </dl>
+                </div>
+
+                {/* Repair item details */}
                 <h4 className="intake-subsection-title">{t("sectionRepairDetails")}</h4>
                 <dl className="detail-grid">
                   <div>
@@ -592,129 +634,123 @@ export function RepairDetail() {
                 </dl>
               </>
             )}
-          </>
+          </section>
         )}
-      </section>
 
-      {/* ================================================================== */}
-      {/* Repair Outcome Section                                             */}
-      {/* ================================================================== */}
-      <section className="detail-section" aria-expanded={expandedSections.outcome}>
-        <div className="section-header-row">
-          <h3
-            onClick={() => toggleSection("outcome")}
-            style={{ cursor: "pointer" }}
-            aria-expanded={expandedSections.outcome}
-          >
-            {t("repairOutcomeSection")}
-          </h3>
-          {canEditRepairWork(selectedRepair) && !isEditingRepairWork && (
-            <button
-              type="button"
-              onClick={() => setIsEditingRepairWork(true)}
-              aria-label={t("editRepairWork")}
-            >
-              <Pencil size={14} /> {t("editRepairWork")}
-            </button>
-          )}
-        </div>
-        <p className="section-hint">{outcomeEditHint()}</p>
+        {/* ── Work Tab ── */}
+        {activeTab === "work" && (
+          <section aria-label={t("tabWork", "Work")}>
+            <div className="section-header-row">
+              <h3>{t("repairOutcomeSection")}</h3>
+              {canEditRepairWork(selectedRepair) && !isEditingRepairWork && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingRepairWork(true)}
+                  aria-label={t("editRepairWork")}
+                >
+                  <Pencil size={14} /> {t("editRepairWork")}
+                </button>
+              )}
+            </div>
+            <p className="section-hint">{outcomeEditHint()}</p>
 
-        {expandedSections.outcome && (
-          <>
             {isEditingRepairWork ? (
-              <div className="repair-outcome-edit-grid">
-                <label>
-                  {t("status")}
-                  <select
-                    value={repairWorkForm.status}
-                    onChange={(e) =>
-                      setRepairWorkForm((prev) => ({
-                        ...prev,
-                        status: e.target.value as
-                          | "IN_PROGRESS"
-                          | "WAITING_PARTS"
-                          | "NOTIFY_CUSTOMER"
-                          | "READY_FOR_PICKUP"
-                          | "COMPLETED"
-                          | "CANCELLED",
-                      }))
-                    }
-                  >
-                    <option value="IN_PROGRESS">{t("statusInProgress")}</option>
-                    <option value="WAITING_PARTS">{t("statusWaitingParts")}</option>
-                    <option value="NOTIFY_CUSTOMER">{t("statusNotifyCustomer")}</option>
-                    <option value="READY_FOR_PICKUP">{t("statusReadyForPickup")}</option>
-                    <option value="COMPLETED">{t("statusCompleted")}</option>
-                    <option value="CANCELLED">{t("statusCancelled")}</option>
-                  </select>
-                </label>
-                <label>
-                  {t("outcome")}
-                  <select
-                    value={repairWorkForm.outcome}
-                    onChange={(e) =>
-                      setRepairWorkForm((prev) => ({
-                        ...prev,
-                        outcome: e.target.value as "" | "YES" | "PARTIAL" | "NO",
-                      }))
-                    }
-                  >
-                    <option value="">{t("unknown")}</option>
-                    <option value="YES">{t("yes")}</option>
-                    <option value="PARTIAL">{t("partial")}</option>
-                    <option value="NO">{t("no")}</option>
-                  </select>
-                  {outcomeWarning && (
-                    <span className="field-warning" role="alert">
-                      {outcomeWarning}
-                    </span>
-                  )}
-                </label>
-                <label>
-                  {t("lastUpdate")}
-                  <input value={formatDisplayDateTime(selectedRepair.updatedAt)} readOnly />
-                </label>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={repairWorkForm.safetyTested === true}
-                    onChange={(e) =>
-                      setRepairWorkForm((prev) => ({
-                        ...prev,
-                        safetyTested: e.target.checked,
-                      }))
-                    }
-                  />
-                  {t("safetyTest")}
-                </label>
-                <label className="wide">
-                  {t("fix")}
-                  <textarea
-                    rows={3}
-                    value={repairWorkForm.fixDescription}
-                    onChange={(e) => setRepairWorkForm((prev) => ({ ...prev, fixDescription: e.target.value }))}
-                  />
-                </label>
-                <label className="wide">
-                  {t("material")}
-                  <textarea
-                    rows={3}
-                    value={repairWorkForm.material}
-                    onChange={(e) => setRepairWorkForm((prev) => ({ ...prev, material: e.target.value }))}
-                  />
-                </label>
-                <label className="wide">
-                  {t("remarks")}
-                  <textarea
-                    rows={4}
-                    value={repairWorkForm.technicianNotes}
-                    onChange={(e) => setRepairWorkForm((prev) => ({ ...prev, technicianNotes: e.target.value }))}
-                  />
-                </label>
-                <div className="repair-work-actions">
+              <>
+                <div className="repair-outcome-edit-grid">
+                  <label>
+                    {t("status")}
+                    <select
+                      value={repairWorkForm.status}
+                      onChange={(e) =>
+                        setRepairWorkForm((prev) => ({
+                          ...prev,
+                          status: e.target.value as
+                            | "IN_PROGRESS"
+                            | "WAITING_PARTS"
+                            | "NOTIFY_CUSTOMER"
+                            | "READY_FOR_PICKUP"
+                            | "COMPLETED"
+                            | "CANCELLED",
+                        }))
+                      }
+                    >
+                      <option value="IN_PROGRESS">{t("statusInProgress")}</option>
+                      <option value="WAITING_PARTS">{t("statusWaitingParts")}</option>
+                      <option value="NOTIFY_CUSTOMER">{t("statusNotifyCustomer")}</option>
+                      <option value="READY_FOR_PICKUP">{t("statusReadyForPickup")}</option>
+                      <option value="COMPLETED">{t("statusCompleted")}</option>
+                      <option value="CANCELLED">{t("statusCancelled")}</option>
+                    </select>
+                  </label>
+                  <label>
+                    {t("outcome")}
+                    <select
+                      value={repairWorkForm.outcome}
+                      onChange={(e) =>
+                        setRepairWorkForm((prev) => ({
+                          ...prev,
+                          outcome: e.target.value as "" | "YES" | "PARTIAL" | "NO",
+                        }))
+                      }
+                    >
+                      <option value="">{t("unknown")}</option>
+                      <option value="YES">{t("yes")}</option>
+                      <option value="PARTIAL">{t("partial")}</option>
+                      <option value="NO">{t("no")}</option>
+                    </select>
+                    {outcomeWarning && (
+                      <span className="field-warning" role="alert">
+                        {outcomeWarning}
+                      </span>
+                    )}
+                  </label>
+                  <label>
+                    {t("lastUpdate")}
+                    <input value={formatDisplayDateTime(selectedRepair.updatedAt)} readOnly />
+                  </label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={repairWorkForm.safetyTested === true}
+                      onChange={(e) =>
+                        setRepairWorkForm((prev) => ({
+                          ...prev,
+                          safetyTested: e.target.checked,
+                        }))
+                      }
+                    />
+                    {t("safetyTest")}
+                  </label>
+                  <label className="wide">
+                    {t("fix")}
+                    <textarea
+                      rows={3}
+                      value={repairWorkForm.fixDescription}
+                      onChange={(e) => setRepairWorkForm((prev) => ({ ...prev, fixDescription: e.target.value }))}
+                    />
+                  </label>
+                  <label className="wide">
+                    {t("material")}
+                    <textarea
+                      rows={3}
+                      value={repairWorkForm.material}
+                      onChange={(e) => setRepairWorkForm((prev) => ({ ...prev, material: e.target.value }))}
+                    />
+                  </label>
+                  <label className="wide">
+                    {t("remarks")}
+                    <textarea
+                      rows={4}
+                      value={repairWorkForm.technicianNotes}
+                      onChange={(e) => setRepairWorkForm((prev) => ({ ...prev, technicianNotes: e.target.value }))}
+                    />
+                  </label>
+                </div>
+
+                {/* Sticky action bar for edit mode */}
+                <div className="detail-action-bar">
                   <button disabled={busyActions.saveRepairWork} onClick={() => void saveRepairWork(selectedRepair.id)}>
-                    {busyActions.saveRepairWork ? t("loadingSaveRepairWork") : t("saveRepairWork")}
+                    <Save size={14} /> {busyActions.saveRepairWork ? t("loadingSaveRepairWork") : t("saveRepairWork")}
                   </button>
                   <button
                     type="button"
@@ -733,7 +769,7 @@ export function RepairDetail() {
                     {t("cancelEdit")}
                   </button>
                 </div>
-              </div>
+              </>
             ) : (
               <dl className="detail-grid">
                 <div>
@@ -776,26 +812,14 @@ export function RepairDetail() {
                 </div>
               </dl>
             )}
-          </>
+          </section>
         )}
-      </section>
 
-      {/* ================================================================== */}
-      {/* Materials Section                                                   */}
-      {/* ================================================================== */}
-      <section className="detail-section" aria-expanded={expandedSections.materials}>
-        <div className="section-header-row">
-          <h3
-            onClick={() => toggleSection("materials")}
-            style={{ cursor: "pointer" }}
-            aria-expanded={expandedSections.materials}
-          >
-            {t("materialsSection")}
-          </h3>
-        </div>
+        {/* ── Parts Tab ── */}
+        {activeTab === "parts" && (
+          <section aria-label={t("tabParts", "Parts")}>
+            <h3>{t("materialsSection")}</h3>
 
-        {expandedSections.materials && (
-          <>
             {isLoadingMaterials ? (
               <div aria-busy="true">
                 <Skeleton width="100%" height="1.2em" count={4} />
@@ -934,97 +958,35 @@ export function RepairDetail() {
                 )}
               </>
             )}
-          </>
+          </section>
         )}
-      </section>
 
-      {/* ================================================================== */}
-      {/* Change History Section                                              */}
-      {/* ================================================================== */}
-      <section className="detail-section" aria-expanded={expandedSections.history}>
-        <h3
-          onClick={() => toggleSection("history")}
-          style={{ cursor: "pointer" }}
-          aria-expanded={expandedSections.history}
-        >
-          {t("repairChangeHistoryTitle")}
-        </h3>
+        {/* ── Photos Tab ── */}
+        {activeTab === "photos" && (
+          <section aria-label={t("tabPhotos", "Photos")}>
+            <div className="photos-section-header">
+              <h3>
+                {t("photos")} ({selectedRepair.photos.length})
+              </h3>
+              {canManagePhotos && (
+                <span className="photo-upload-group">
+                  <label className="photo-upload-btn">
+                    <Plus size={14} /> {t("addPhotos")}
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => void uploadPhotos(selectedRepair.id, e.target.files)}
+                      hidden
+                    />
+                  </label>
+                  <span className="photo-info-tip" title={t("photoRequirements")}>
+                    &#9432;
+                  </span>
+                </span>
+              )}
+            </div>
 
-        {expandedSections.history && (
-          <>
-            {isLoadingRepairHistory ? (
-              <div aria-busy="true">
-                <Skeleton width="100%" height="1.2em" count={3} />
-              </div>
-            ) : repairChangeHistory.length === 0 ? (
-              <p className="field-help">{t("repairChangeHistoryEmpty")}</p>
-            ) : (
-              <ul className="repair-history-list">
-                {repairChangeHistory.map((entry) => (
-                  <li key={entry.id}>
-                    <strong>{formatChangeType(entry.changeType)}</strong>{" "}
-                    <span className="field-help">
-                      {formatDisplayDateTime(entry.createdAt)} -{" "}
-                      {entry.changedBy?.fullName ?? entry.changedBy?.username ?? t("unknown")}
-                    </span>
-                    {entry.changeType === "ASSIGNMENT" ? (
-                      <div className="field-help">
-                        {t("historyAssignmentFrom", {
-                          from: (entry.previousData?.assignedToName as string) || t("unassigned"),
-                        })}
-                        {" → "}
-                        {t("historyAssignmentTo", {
-                          to: (entry.nextData?.assignedToName as string) || t("unassigned"),
-                        })}
-                      </div>
-                    ) : (
-                      entry.changedFields.length > 0 && (
-                        <div className="field-help">
-                          {t("repairChangeFieldsLabel")}: {entry.changedFields.join(", ")}
-                        </div>
-                      )
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </section>
-
-      {/* ================================================================== */}
-      {/* Photos Section                                                      */}
-      {/* ================================================================== */}
-      <section className="photos-section" aria-expanded={expandedSections.photos}>
-        <div className="photos-section-header">
-          <h3
-            onClick={() => toggleSection("photos")}
-            style={{ cursor: "pointer" }}
-            aria-expanded={expandedSections.photos}
-          >
-            {t("photos")} ({selectedRepair.photos.length})
-          </h3>
-          {canManagePhotos && (
-            <span className="photo-upload-group">
-              <label className="photo-upload-btn">
-                <Plus size={14} /> {t("addPhotos")}
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => void uploadPhotos(selectedRepair.id, e.target.files)}
-                  hidden
-                />
-              </label>
-              <span className="photo-info-tip" title={t("photoRequirements")}>
-                &#9432;
-              </span>
-            </span>
-          )}
-        </div>
-
-        {expandedSections.photos && (
-          <>
             {selectedRepair.photos.length === 0 ? (
               <p className="field-help">{t("noPhotos")}</p>
             ) : (
@@ -1069,9 +1031,53 @@ export function RepairDetail() {
                 ))}
               </div>
             )}
-          </>
+          </section>
         )}
-      </section>
+
+        {/* ── History Tab ── */}
+        {activeTab === "history" && (
+          <section aria-label={t("tabHistory", "History")}>
+            <h3>{t("repairChangeHistoryTitle")}</h3>
+
+            {isLoadingRepairHistory ? (
+              <div aria-busy="true">
+                <Skeleton width="100%" height="1.2em" count={3} />
+              </div>
+            ) : repairChangeHistory.length === 0 ? (
+              <p className="field-help">{t("repairChangeHistoryEmpty")}</p>
+            ) : (
+              <ul className="repair-history-list">
+                {repairChangeHistory.map((entry) => (
+                  <li key={entry.id}>
+                    <strong>{formatChangeType(entry.changeType)}</strong>{" "}
+                    <span className="field-help">
+                      {formatDisplayDateTime(entry.createdAt)} -{" "}
+                      {entry.changedBy?.fullName ?? entry.changedBy?.username ?? t("unknown")}
+                    </span>
+                    {entry.changeType === "ASSIGNMENT" ? (
+                      <div className="field-help">
+                        {t("historyAssignmentFrom", {
+                          from: (entry.previousData?.assignedToName as string) || t("unassigned"),
+                        })}
+                        {" → "}
+                        {t("historyAssignmentTo", {
+                          to: (entry.nextData?.assignedToName as string) || t("unassigned"),
+                        })}
+                      </div>
+                    ) : (
+                      entry.changedFields.length > 0 && (
+                        <div className="field-help">
+                          {t("repairChangeFieldsLabel")}: {entry.changedFields.join(", ")}
+                        </div>
+                      )
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+      </div>
 
       {/* ---- Thermal label preview ---- */}
       {showThermalPreview && (
