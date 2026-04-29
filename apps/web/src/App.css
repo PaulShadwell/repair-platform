@@ -1532,6 +1532,14 @@ button:hover {
   margin-top: 4px;
 }
 
+.repair-timeline.compact .timeline-substatus {
+  flex-basis: auto;
+  margin-left: 0;
+  margin-top: 0.25rem;
+  align-self: center;
+  text-align: center;
+}
+
 /* ── Tab bar ── */
 .detail-tab-bar {
   display: flex;

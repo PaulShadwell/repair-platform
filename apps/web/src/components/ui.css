@@ -701,6 +701,17 @@ html {
   height: 22px;
 }
 
+/* Contextual detail actions variant */
+.mobile-detail-actions {
+  background: var(--color-bg-card, #fff);
+  border-top: 2px solid var(--color-primary, #2a5d93);
+}
+
+.mobile-detail-actions .mobile-nav-item.active {
+  color: var(--color-success, #1f7a47);
+  font-weight: 700;
+}
+
 /* Add bottom padding to main content on mobile to account for bottom nav */
 @media (max-width: 900px) {
   .container {

@@ -45,6 +45,8 @@ export default function UserGuide({ onClose }: UserGuideProps) {
             <li><a href="#guide-inventory" onClick={scrollToSection}>{t("helpInventory")}</a></li>
             <li><a href="#guide-csv-export" onClick={scrollToSection}>{t("helpCsvExport")}</a></li>
             <li><a href="#guide-settings" onClick={scrollToSection}>{t("helpSettings")}</a></li>
+            <li><a href="#guide-dark-mode" onClick={scrollToSection}>{t("helpDarkMode")}</a></li>
+            <li><a href="#guide-mobile" onClick={scrollToSection}>{t("helpMobile")}</a></li>
             <li><a href="#guide-roles" onClick={scrollToSection}>{t("helpRoles")}</a></li>
             <li><a href="#guide-tips" onClick={scrollToSection}>{t("helpTips")}</a></li>
           </ol>
@@ -99,19 +101,30 @@ export default function UserGuide({ onClose }: UserGuideProps) {
             <li>{t("helpRepairListL3")}</li>
             <li>{t("helpRepairListL4")}</li>
           </ul>
+          <h4>{t("helpRepairListSearch")}</h4>
+          <p>{t("helpRepairListSearchP1")}</p>
+          <h4>{t("helpRepairListFilters")}</h4>
+          <p>{t("helpRepairListFiltersP1")}</p>
         </article>
 
         <article id="guide-repair-detail">
           <h3>5. {t("helpRepairDetail")}</h3>
           <p>{t("helpRepairDetailP1")}</p>
-          <h4>{t("helpRepairDetailIntake")}</h4>
-          <p>{t("helpRepairDetailIntakeP1")}</p>
-          <h4>{t("helpRepairDetailOutcome")}</h4>
-          <p>{t("helpRepairDetailOutcomeP1")}</p>
+          <h4>{t("helpRepairDetailHeader")}</h4>
+          <p>{t("helpRepairDetailHeaderP1")}</p>
+          <h4>{t("helpRepairDetailTabs")}</h4>
+          <p>{t("helpRepairDetailTabsP1")}</p>
+          <dl className="user-guide-dl">
+            <div><dt>{t("tabDetails")}</dt><dd>{t("helpRepairDetailTabDetails")}</dd></div>
+            <div><dt>{t("tabWork")}</dt><dd>{t("helpRepairDetailTabWork")}</dd></div>
+            <div><dt>{t("tabParts")}</dt><dd>{t("helpRepairDetailTabParts")}</dd></div>
+            <div><dt>{t("tabPhotos")}</dt><dd>{t("helpRepairDetailTabPhotos")}</dd></div>
+            <div><dt>{t("tabHistory")}</dt><dd>{t("helpRepairDetailTabHistory")}</dd></div>
+          </dl>
           <h4>{t("helpRepairDetailAssign")}</h4>
           <p>{t("helpRepairDetailAssignP1")}</p>
-          <h4>{t("helpRepairDetailHistory")}</h4>
-          <p>{t("helpRepairDetailHistoryP1")}</p>
+          <h4>{t("helpRepairDetailEditing")}</h4>
+          <p>{t("helpRepairDetailEditingP1")}</p>
         </article>
 
         <article id="guide-photos">
@@ -197,8 +210,25 @@ export default function UserGuide({ onClose }: UserGuideProps) {
           </ul>
         </article>
 
+        <article id="guide-dark-mode">
+          <h3>15. {t("helpDarkMode")}</h3>
+          <p>{t("helpDarkModeP1")}</p>
+          <ul>
+            <li>{t("helpDarkModeL1")}</li>
+            <li>{t("helpDarkModeL2")}</li>
+            <li>{t("helpDarkModeL3")}</li>
+          </ul>
+          <p>{t("helpDarkModeP2")}</p>
+        </article>
+
+        <article id="guide-mobile">
+          <h3>16. {t("helpMobile")}</h3>
+          <p>{t("helpMobileP1")}</p>
+          <p>{t("helpMobileP2")}</p>
+        </article>
+
         <article id="guide-roles">
-          <h3>15. {t("helpRoles")}</h3>
+          <h3>17. {t("helpRoles")}</h3>
           <p>{t("helpRolesP1")}</p>
           <table className="user-guide-table">
             <thead>
@@ -226,7 +256,7 @@ export default function UserGuide({ onClose }: UserGuideProps) {
         </article>
 
         <article id="guide-tips">
-          <h3>16. {t("helpTips")}</h3>
+          <h3>18. {t("helpTips")}</h3>
           <ul>
             <li>{t("helpTipsL1")}</li>
             <li>{t("helpTipsL2")}</li>
@@ -234,6 +264,8 @@ export default function UserGuide({ onClose }: UserGuideProps) {
             <li>{t("helpTipsL4")}</li>
             <li>{t("helpTipsL5")}</li>
             <li>{t("helpTipsL6")}</li>
+            <li>{t("helpTipsL7")}</li>
+            <li>{t("helpTipsL8")}</li>
           </ul>
         </article>
       </div>
