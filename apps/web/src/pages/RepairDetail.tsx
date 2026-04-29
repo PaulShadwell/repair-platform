@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Spinner } from "../components/Spinner";
 import { Skeleton } from "../components/Skeleton";
 import {
-  ArrowLeft,
   Pencil,
   Printer,
   FileText,
@@ -163,7 +162,6 @@ export function RepairDetail() {
     selectedRepair,
     isMobile,
     mobileView,
-    setMobileView,
     assignees,
     canAssignRepairs,
     canPrintFromDetail,
@@ -226,14 +224,14 @@ export function RepairDetail() {
 
   // -- Local validation state --
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [outcomeWarning, setOutcomeWarning] = useState<string | null>(null);
 
-  // Reset tab when a different repair is selected
-  useEffect(() => {
-    setActiveTab("details");
-    setEmailError(null);
-    setOutcomeWarning(null);
-  }, [selectedRepair?.id]);
+  // Reset tab when a different repair is selected (ref-based, no effect)
+  const prevRepairIdRef = useRef<string | null>(null);
+  if (selectedRepair?.id !== prevRepairIdRef.current) {
+    prevRepairIdRef.current = selectedRepair?.id ?? null;
+    if (activeTab !== "details") setActiveTab("details");
+    if (emailError !== null) setEmailError(null);
+  }
 
   // -- Inline email validation --
   function handleEmailChange(value: string) {
@@ -245,13 +243,12 @@ export function RepairDetail() {
     }
   }
 
-  // -- Outcome warning when setting status to COMPLETED --
-  useEffect(() => {
+  // -- Outcome warning (derived, no state) --
+  const outcomeWarning = useMemo(() => {
     if (repairWorkForm.status === "COMPLETED" && !repairWorkForm.outcome) {
-      setOutcomeWarning(t("outcomeRequiredWarning") ?? "Setting status to Completed without an outcome.");
-    } else {
-      setOutcomeWarning(null);
+      return t("outcomeRequiredWarning") ?? "Setting status to Completed without an outcome.";
     }
+    return null;
   }, [repairWorkForm.status, repairWorkForm.outcome, t]);
 
   const ARTICLE_TYPE_OPTIONS = [
