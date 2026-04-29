@@ -272,8 +272,8 @@ export type AppContextValue = {
   setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   theme: "light" | "dark" | "system";
   setTheme: (theme: "light" | "dark" | "system") => void;
-  adminTab: "none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help";
-  setAdminTab: React.Dispatch<React.SetStateAction<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help">>;
+  adminTab: "none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help" | "feedback" | "analytics";
+  setAdminTab: React.Dispatch<React.SetStateAction<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help" | "feedback" | "analytics">>;
   showFunctionHub: boolean;
   setShowFunctionHub: React.Dispatch<React.SetStateAction<boolean>>;
   showProfilePage: boolean;
@@ -692,7 +692,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       document.documentElement.setAttribute("data-theme", theme);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help">(
+  const [adminTab, setAdminTab] = useState<"none" | "dashboard" | "addRepair" | "addRepairer" | "manageRepairers" | "customers" | "settings" | "inventory" | "suppliers" | "help" | "feedback" | "analytics">(
     "none",
   );
   const [showFunctionHub, setShowFunctionHub] = useState<boolean>(false);

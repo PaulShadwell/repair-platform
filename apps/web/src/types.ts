@@ -149,6 +149,57 @@ export type RepairMaterial = {
   addedBy?: { id: string; fullName: string } | null;
 };
 
+// ── Feedback ──
+
+export type FeedbackCategory = "BUG" | "FEATURE" | "IMPROVEMENT" | "GENERAL";
+export type FeedbackStatus = "OPEN" | "UNDER_REVIEW" | "PLANNED" | "DONE" | "CLOSED";
+
+export type FeedbackItem = {
+  id: string;
+  title: string;
+  body: string;
+  category: FeedbackCategory;
+  status: FeedbackStatus;
+  author: { id: string; fullName: string; username: string };
+  voteCount: number;
+  commentCount: number;
+  hasVoted: boolean;
+  comments: FeedbackComment[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FeedbackComment = {
+  id: string;
+  body: string;
+  author: { id: string; fullName: string; username: string };
+  createdAt: string;
+};
+
+// ── Analytics ──
+
+export type AnalyticsOverview = {
+  totalRepairs: number;
+  repairsLast30: number;
+  repairsLast7: number;
+  completedLast30: number;
+  avgResolutionHours: number | null;
+  statusBreakdown: Array<{ status: string; count: number }>;
+  outcomeBreakdown: Array<{ outcome: string | null; count: number }>;
+  articleTypeBreakdown: Array<{ type: string; count: number }>;
+  assigneeWorkload: Array<{
+    assigneeId: string | null;
+    assigneeName: string;
+    activeCount: number;
+  }>;
+};
+
+export type AnalyticsTrend = {
+  day: string;
+  created: number;
+  completed: number;
+};
+
 export type PrinterProfile = {
   id: string;
   name: string;

@@ -52,6 +52,7 @@ export function Header() {
     sort,
     // Permissions
     isAdmin,
+    isSupervisor,
     canCreateRepair,
     canManageUsers,
     canViewArchivedItems,
@@ -224,6 +225,32 @@ export function Header() {
       isActive: false,
       disabled: busyActions.exportCsv,
       onClick: () => setShowCsvExportDialog(true),
+    },
+    // Analytics (Admin / Supervisor)
+    {
+      key: "analytics",
+      label: t("analyticsSection"),
+      visible: isAdmin || isSupervisor,
+      isActive: activeKey === "analytics",
+      onClick: () =>
+        guardUnsavedChanges(() => {
+          setShowFunctionHub(false);
+          setAdminTab("analytics");
+          closeMobileMenu();
+        }),
+    },
+    // Feedback (visible to all roles)
+    {
+      key: "feedback",
+      label: t("feedbackSection"),
+      visible: true,
+      isActive: activeKey === "feedback",
+      onClick: () =>
+        guardUnsavedChanges(() => {
+          setShowFunctionHub(false);
+          setAdminTab("feedback");
+          closeMobileMenu();
+        }),
     },
     // Help (visible to all roles)
     {

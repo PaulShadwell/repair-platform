@@ -24,6 +24,8 @@ import { FunctionHub } from "./pages/FunctionHub";
 import { RepairList } from "./pages/RepairList";
 import { RepairDetail } from "./pages/RepairDetail";
 import UserGuide from "./UserGuide";
+import { FeedbackBoard } from "./pages/FeedbackBoard";
+import { AnalyticsDashboard } from "./pages/AnalyticsDashboard";
 import { MobileNav } from "./components/MobileNav";
 
 function AppInner() {
@@ -101,6 +103,8 @@ function AppInner() {
           {adminTab === "inventory" && <InventoryTab />}
           {adminTab === "suppliers" && <SuppliersTab />}
           {adminTab === "help" && <UserGuide onClose={() => ctx.setAdminTab("none")} />}
+          {adminTab === "feedback" && <FeedbackBoard />}
+          {adminTab === "analytics" && (isAdmin || ctx.user?.roles.includes("SUPERVISOR")) && <AnalyticsDashboard />}
         </section>
       )}
 

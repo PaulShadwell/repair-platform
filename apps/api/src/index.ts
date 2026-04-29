@@ -18,6 +18,8 @@ import { brandingRouter } from "./routes/branding.js";
 import { suppliersRouter } from "./routes/suppliers.js";
 import { inventoryRouter } from "./routes/inventory.js";
 import { repairMaterialsRouter } from "./routes/repairMaterials.js";
+import { feedbackRouter } from "./routes/feedback.js";
+import { analyticsRouter } from "./routes/analytics.js";
 import { ensureStoragePaths } from "./services/storage.js";
 
 const app = express();
@@ -43,6 +45,8 @@ app.use("/api/branding", brandingRouter);
 app.use("/api/suppliers", suppliersRouter);
 app.use("/api/inventory", inventoryRouter);
 app.use("/api/repairs/:repairId/materials", repairMaterialsRouter);
+app.use("/api/feedback", feedbackRouter);
+app.use("/api/analytics", analyticsRouter);
 app.use(errorHandler);
 
 async function ensureBootstrapData(): Promise<void> {

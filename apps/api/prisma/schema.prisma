@@ -64,7 +64,10 @@ model User {
   printLogs        PrintLog[]
   pairingCodes     PrinterPairingCode[]
   passwordResetTokens PasswordResetToken[]
-  addedMaterials   RepairMaterial[]
+  addedMaterials       RepairMaterial[]
+  feedbacks            Feedback[]         @relation("FeedbackAuthor")
+  feedbackVotes        FeedbackVote[]     @relation("FeedbackVoter")
+  feedbackComments     FeedbackComment[]  @relation("FeedbackCommenter")
 }
 
 model Role {
@@ -358,4 +361,63 @@ model PasswordResetToken {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+}
+
+// ── Feedback board ──
+
+enum FeedbackCategory {
+  BUG
+  FEATURE
+  IMPROVEMENT
+  GENERAL
+}
+
+enum FeedbackStatus {
+  OPEN
+  UNDER_REVIEW
+  PLANNED
+  DONE
+  CLOSED
+}
+
+model Feedback {
+  id          String           @id @default(uuid())
+  title       String
+  body        String
+  category    FeedbackCategory
+  status      FeedbackStatus   @default(OPEN)
+  authorId    String
+  author      User             @relation("FeedbackAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  votes       FeedbackVote[]
+  comments    FeedbackComment[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([authorId])
+}
+
+model FeedbackVote {
+  id         String   @id @default(uuid())
+  feedbackId String
+  userId     String
+  createdAt  DateTime @default(now())
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  user       User     @relation("FeedbackVoter", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([feedbackId, userId])
+  @@index([feedbackId])
+}
+
+model FeedbackComment {
+  id         String   @id @default(uuid())
+  feedbackId String
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  author     User     @relation("FeedbackCommenter", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId, createdAt])
 }
