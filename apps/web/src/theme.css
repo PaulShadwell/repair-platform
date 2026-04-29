@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light;
+
   /* -- Surface colors -- */
   --color-bg: #fff;
   --color-bg-subtle: #f7f9fc;
@@ -8,12 +10,15 @@
   --color-bg-active: #fff;
   --color-bg-input: #fff;
   --color-bg-overlay: rgba(17, 24, 39, 0.36);
+  --color-surface: var(--color-bg-subtle);
+  --color-surface-hover: var(--color-bg-hover);
 
   /* -- Border colors -- */
   --color-border: #cdd8e5;
   --color-border-light: #dde6f0;
   --color-border-input: #b8c6d8;
   --color-border-focus: #2a5d93;
+  --color-border-form: #cbd5e0;
 
   /* -- Text colors -- */
   --color-text: #1a202c;
@@ -22,6 +27,9 @@
   --color-text-heading: #1e3a5c;
   --color-text-link: #235db6;
   --color-text-on-primary: #fff;
+  --color-text-subtle: #5f6470;
+  --color-icon: #718096;
+  --color-icon-danger: #e53e3e;
 
   /* -- Primary / brand -- */
   --color-primary: #2a5d93;
@@ -34,6 +42,7 @@
   --color-success-border: #b7e5c8;
   --color-warning: #d69e2e;
   --color-warning-bg: #fff7ea;
+  --color-warning-border: #f0cfab;
   --color-error: #c53030;
   --color-error-bg: #fff5f5;
   --color-error-border: #e8a4a4;
@@ -43,14 +52,25 @@
   /* -- Status chips -- */
   --color-chip-new-bg: #eef3ff;
   --color-chip-new-text: #2d4a7a;
+  --color-chip-new-border: #cbd9ff;
   --color-chip-progress-bg: #ebf8ff;
   --color-chip-progress-text: #2c5282;
+  --color-chip-progress-border: #f2d4a4;
   --color-chip-ready-bg: #ecfbf3;
   --color-chip-ready-text: #11633d;
+  --color-chip-ready-border: #a6e3c2;
   --color-chip-completed-bg: #e6faf0;
   --color-chip-completed-text: #1f7a47;
   --color-chip-cancelled-bg: #fff5f5;
   --color-chip-cancelled-text: #912e2e;
+
+  /* -- Printer status -- */
+  --color-printer-offline-bg: #fff3e9;
+  --color-printer-offline-border: #f0cfab;
+  --color-printer-offline-text: #965a1d;
+  --color-printer-unknown-bg: #eef2f7;
+  --color-printer-unknown-border: #ced9e8;
+  --color-printer-unknown-text: #4b617f;
 
   /* -- Shadows -- */
   --shadow-card: 0 16px 36px rgba(35, 53, 77, 0.12);
@@ -59,6 +79,7 @@
 
   /* -- Focus -- */
   --color-focus-ring: rgba(42, 93, 147, 0.2);
+  --color-accent: #3182ce;
 
   /* -- Misc -- */
   --color-skeleton-from: #e8eef6;
@@ -70,10 +91,20 @@
   --color-danger: #c53030;
   --color-danger-bg: #fff5f5;
   --color-danger-hover: #912e2e;
+
+  /* -- Photo delete overlay -- */
+  --color-photo-delete-bg: rgba(255, 255, 255, 0.85);
+  --color-photo-delete-text: #8d2323;
+
+  /* -- Thermal preview -- */
+  --color-thermal-bg: #fff;
+  --color-thermal-border: #1e1e1e;
 }
 
 /* Dark theme */
 [data-theme="dark"] {
+  color-scheme: dark;
+
   --color-bg: #1a1a2e;
   --color-bg-subtle: #16213e;
   --color-bg-muted: #1f2b47;
@@ -82,11 +113,14 @@
   --color-bg-active: #1e2d4a;
   --color-bg-input: #162038;
   --color-bg-overlay: rgba(0, 0, 0, 0.55);
+  --color-surface: #1f2b47;
+  --color-surface-hover: #253a5c;
 
   --color-border: #2d4a7a;
   --color-border-light: #253a5c;
   --color-border-input: #3a5580;
   --color-border-focus: #4299e1;
+  --color-border-form: #3a5580;
 
   --color-text: #e2e8f0;
   --color-text-secondary: #a0b0c0;
@@ -94,6 +128,9 @@
   --color-text-heading: #cbd9ff;
   --color-text-link: #6ea0d4;
   --color-text-on-primary: #fff;
+  --color-text-subtle: #8899aa;
+  --color-icon: #8899aa;
+  --color-icon-danger: #fc8181;
 
   --color-primary: #4299e1;
   --color-primary-hover: #3182ce;
@@ -104,6 +141,7 @@
   --color-success-border: #2d5a3e;
   --color-warning: #ecc94b;
   --color-warning-bg: #2d2a1a;
+  --color-warning-border: #5a4a1a;
   --color-error: #fc8181;
   --color-error-bg: #2e1a1a;
   --color-error-border: #6b2a2a;
@@ -112,20 +150,32 @@
 
   --color-chip-new-bg: #1e2d4a;
   --color-chip-new-text: #6ea0d4;
+  --color-chip-new-border: #2d4a7a;
   --color-chip-progress-bg: #1a2540;
   --color-chip-progress-text: #4299e1;
+  --color-chip-progress-border: #2d4a7a;
   --color-chip-ready-bg: #1a2e25;
   --color-chip-ready-text: #86c07c;
+  --color-chip-ready-border: #2d5a3e;
   --color-chip-completed-bg: #1a2e25;
   --color-chip-completed-text: #a6e3c2;
   --color-chip-cancelled-bg: #2e1a1a;
   --color-chip-cancelled-text: #fc8181;
+
+  /* -- Printer status -- */
+  --color-printer-offline-bg: #2d2a1a;
+  --color-printer-offline-border: #5a4a1a;
+  --color-printer-offline-text: #ecc94b;
+  --color-printer-unknown-bg: #1f2b47;
+  --color-printer-unknown-border: #2d4a7a;
+  --color-printer-unknown-text: #8899aa;
 
   --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.3);
   --shadow-drawer: -8px 0 24px rgba(0, 0, 0, 0.4);
   --shadow-toast: 0 4px 16px rgba(0, 0, 0, 0.4);
 
   --color-focus-ring: rgba(66, 153, 225, 0.3);
+  --color-accent: #4299e1;
 
   --color-skeleton-from: #1f2b47;
   --color-skeleton-via: #253a5c;
@@ -136,11 +186,21 @@
   --color-danger: #fc8181;
   --color-danger-bg: #2e1a1a;
   --color-danger-hover: #e53e3e;
+
+  /* -- Photo delete overlay -- */
+  --color-photo-delete-bg: rgba(30, 45, 74, 0.85);
+  --color-photo-delete-text: #fc8181;
+
+  /* -- Thermal preview -- */
+  --color-thermal-bg: #fff;
+  --color-thermal-border: #1e1e1e;
 }
 
 /* System preference auto-detect */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
     --color-bg: #1a1a2e;
     --color-bg-subtle: #16213e;
     --color-bg-muted: #1f2b47;
@@ -149,11 +209,14 @@
     --color-bg-active: #1e2d4a;
     --color-bg-input: #162038;
     --color-bg-overlay: rgba(0, 0, 0, 0.55);
+    --color-surface: #1f2b47;
+    --color-surface-hover: #253a5c;
 
     --color-border: #2d4a7a;
     --color-border-light: #253a5c;
     --color-border-input: #3a5580;
     --color-border-focus: #4299e1;
+    --color-border-form: #3a5580;
 
     --color-text: #e2e8f0;
     --color-text-secondary: #a0b0c0;
@@ -161,6 +224,9 @@
     --color-text-heading: #cbd9ff;
     --color-text-link: #6ea0d4;
     --color-text-on-primary: #fff;
+    --color-text-subtle: #8899aa;
+    --color-icon: #8899aa;
+    --color-icon-danger: #fc8181;
 
     --color-primary: #4299e1;
     --color-primary-hover: #3182ce;
@@ -171,6 +237,7 @@
     --color-success-border: #2d5a3e;
     --color-warning: #ecc94b;
     --color-warning-bg: #2d2a1a;
+    --color-warning-border: #5a4a1a;
     --color-error: #fc8181;
     --color-error-bg: #2e1a1a;
     --color-error-border: #6b2a2a;
@@ -179,20 +246,31 @@
 
     --color-chip-new-bg: #1e2d4a;
     --color-chip-new-text: #6ea0d4;
+    --color-chip-new-border: #2d4a7a;
     --color-chip-progress-bg: #1a2540;
     --color-chip-progress-text: #4299e1;
+    --color-chip-progress-border: #2d4a7a;
     --color-chip-ready-bg: #1a2e25;
     --color-chip-ready-text: #86c07c;
+    --color-chip-ready-border: #2d5a3e;
     --color-chip-completed-bg: #1a2e25;
     --color-chip-completed-text: #a6e3c2;
     --color-chip-cancelled-bg: #2e1a1a;
     --color-chip-cancelled-text: #fc8181;
+
+    --color-printer-offline-bg: #2d2a1a;
+    --color-printer-offline-border: #5a4a1a;
+    --color-printer-offline-text: #ecc94b;
+    --color-printer-unknown-bg: #1f2b47;
+    --color-printer-unknown-border: #2d4a7a;
+    --color-printer-unknown-text: #8899aa;
 
     --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.3);
     --shadow-drawer: -8px 0 24px rgba(0, 0, 0, 0.4);
     --shadow-toast: 0 4px 16px rgba(0, 0, 0, 0.4);
 
     --color-focus-ring: rgba(66, 153, 225, 0.3);
+    --color-accent: #4299e1;
 
     --color-skeleton-from: #1f2b47;
     --color-skeleton-via: #253a5c;
@@ -203,5 +281,11 @@
     --color-danger: #fc8181;
     --color-danger-bg: #2e1a1a;
     --color-danger-hover: #e53e3e;
+
+    --color-photo-delete-bg: rgba(30, 45, 74, 0.85);
+    --color-photo-delete-text: #fc8181;
+
+    --color-thermal-bg: #fff;
+    --color-thermal-border: #1e1e1e;
   }
 }

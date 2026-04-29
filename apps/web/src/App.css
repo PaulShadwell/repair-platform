@@ -8,6 +8,24 @@
 
 input, select, textarea, button {
   font-family: inherit;
+  color: var(--color-text);
+}
+
+input, select, textarea {
+  background: var(--color-bg-input);
+  border-color: var(--color-border-input);
+}
+
+button {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--color-bg-hover);
 }
 
 .login-screen {
@@ -875,13 +893,13 @@ input, select, textarea, button {
 
 .status-chip.new {
   background: var(--color-chip-new-bg);
-  border-color: #cbd9ff;
+  border-color: var(--color-chip-new-border);
   color: var(--color-chip-new-text);
 }
 
 .status-chip.progress {
   background: var(--color-chip-progress-bg);
-  border-color: #f2d4a4;
+  border-color: var(--color-chip-progress-border);
   color: var(--color-chip-progress-text);
 }
 
@@ -893,7 +911,7 @@ input, select, textarea, button {
 
 .status-chip.completed {
   background: var(--color-chip-completed-bg);
-  border-color: #a6e3c2;
+  border-color: var(--color-chip-ready-border);
   color: var(--color-chip-completed-text);
 }
 
@@ -1382,7 +1400,7 @@ input, select, textarea, button {
 .intake-edit-grid label.checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: #3182ce;
+  accent-color: var(--color-accent);
   cursor: pointer;
 }
 
@@ -1477,15 +1495,15 @@ input, select, textarea, button {
 }
 
 .printer-status-badge.offline {
-  background: #fff3e9;
-  border-color: #f0cfab;
-  color: #965a1d;
+  background: var(--color-printer-offline-bg);
+  border-color: var(--color-printer-offline-border);
+  color: var(--color-printer-offline-text);
 }
 
 .printer-status-badge.unknown {
-  background: #eef2f7;
-  border-color: #ced9e8;
-  color: #4b617f;
+  background: var(--color-printer-unknown-bg);
+  border-color: var(--color-printer-unknown-border);
+  color: var(--color-printer-unknown-text);
 }
 
 input,
@@ -1514,7 +1532,7 @@ button {
 .translation-inline {
   display: block;
   margin-top: 0.2rem;
-  color: #5f6470;
+  color: var(--color-text-subtle);
   font-size: 0.82rem;
 }
 
@@ -1560,13 +1578,13 @@ button {
 
 .photo-info-tip {
   font-size: 1rem;
-  color: #a0aec0;
+  color: var(--color-text-muted);
   cursor: help;
   line-height: 1;
 }
 
 .photo-info-tip:hover {
-  color: #4a5568;
+  color: var(--color-text-secondary);
 }
 
 .photo-grid {
@@ -1620,8 +1638,8 @@ button {
   justify-content: center;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  color: #8d2323;
+  background: var(--color-photo-delete-bg);
+  color: var(--color-photo-delete-text);
   cursor: pointer;
   opacity: 0;
   transition: opacity 150ms ease, background 150ms ease;
@@ -1720,14 +1738,14 @@ button {
 
 .preview-note {
   margin: 0.25rem 0 0.75rem;
-  color: #666;
+  color: var(--color-text-muted);
 }
 
 .thermal-preview {
   width: 80mm;
   max-width: 100%;
-  border: 2px solid #1e1e1e;
-  background: #fff;
+  border: 2px solid var(--color-thermal-border);
+  background: var(--color-thermal-bg);
   margin-bottom: 0.75rem;
 }
 
@@ -1737,7 +1755,7 @@ button {
 
 .thermal-preview .two-col {
   grid-template-columns: 42% 58%;
-  border-bottom: 1px solid #1e1e1e;
+  border-bottom: 1px solid var(--color-thermal-border);
 }
 
 .thermal-preview .cell {
@@ -1748,7 +1766,7 @@ button {
 }
 
 .thermal-preview .left {
-  border-right: 1px solid #1e1e1e;
+  border-right: 1px solid var(--color-thermal-border);
 }
 
 .thermal-preview .strong {
@@ -1945,7 +1963,7 @@ button {
 }
 
 .field-error {
-  border-color: #e53e3e !important;
+  border-color: var(--color-icon-danger) !important;
   box-shadow: 0 0 0 2px rgba(229, 62, 62, 0.15) !important;
 }
 
@@ -2263,10 +2281,10 @@ button {
   align-items: center;
   gap: 4px;
   padding: 6px 14px;
-  border: 1px dashed #a0aec0;
+  border: 1px dashed var(--color-text-muted);
   border-radius: 6px;
   background: transparent;
-  color: #4a5568;
+  color: var(--color-text-secondary);
   cursor: pointer;
   font-size: 0.85rem;
 }
@@ -2295,7 +2313,7 @@ button {
 .material-add-form input[type="number"],
 .material-add-form select {
   padding: 4px 6px;
-  border: 1px solid #cbd5e0;
+  border: 1px solid var(--color-border-form);
   border-radius: 4px;
   font-size: 0.85rem;
 }
@@ -2312,16 +2330,16 @@ button {
   gap: 4px;
 }
 .receipt-actions a {
-  color: #3182ce;
+  color: var(--color-text-link);
 }
 .receipt-upload-label {
   cursor: pointer;
-  color: #718096;
+  color: var(--color-icon);
   display: inline-flex;
   align-items: center;
 }
 .receipt-upload-label:hover {
-  color: #3182ce;
+  color: var(--color-text-link);
 }
 .hidden-input {
   display: none;
@@ -2331,12 +2349,12 @@ button {
   border: none;
   cursor: pointer;
   padding: 2px;
-  color: #718096;
+  color: var(--color-icon);
   display: inline-flex;
   align-items: center;
 }
 .icon-btn:hover {
-  color: #e53e3e;
+  color: var(--color-icon-danger);
 }
 
 /* ── Inventory & Supplier tables ── */
@@ -2351,7 +2369,7 @@ button {
   flex: 1;
   min-width: 180px;
   padding: 6px 10px;
-  border: 1px solid #cbd5e0;
+  border: 1px solid var(--color-border-form);
   border-radius: 6px;
   font-size: 0.85rem;
 }
@@ -2382,7 +2400,7 @@ button {
   border: none;
   cursor: pointer;
   padding: 2px 4px;
-  color: #718096;
+  color: var(--color-icon);
 }
 .inventory-table td button:hover {
   color: var(--color-text);
@@ -2409,7 +2427,7 @@ button {
 .inline-edit-form select,
 .inline-edit-form textarea {
   padding: 5px 8px;
-  border: 1px solid #cbd5e0;
+  border: 1px solid var(--color-border-form);
   border-radius: 4px;
   font-size: 0.85rem;
 }
@@ -2450,7 +2468,7 @@ button {
 }
 .user-guide-header-actions button {
   padding: 6px 14px;
-  border: 1px solid #cbd5e0;
+  border: 1px solid var(--color-border-form);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.88rem;
