@@ -12,10 +12,12 @@ export const feedbackRouter = Router();
 feedbackRouter.get("/", requireAuth, async (req: AuthenticatedRequest, res) => {
   if (!req.user) { res.status(401).json({ message: "Unauthorized" }); return; }
 
-  const category = req.query.category as string | undefined;
-  const status = req.query.status as string | undefined;
-  const sortBy = (req.query.sortBy as string) ?? "votes";
-  const sortDir = (req.query.sortDir as string) === "asc" ? "asc" as const : "desc" as const;
+  const categoryRaw = req.query.category;
+  const category = typeof categoryRaw === "string" ? categoryRaw : undefined;
+  const statusRaw = req.query.status;
+  const status = typeof statusRaw === "string" ? statusRaw : undefined;
+  const sortBy = String(req.query.sortBy ?? "votes");
+  const sortDir = String(req.query.sortDir ?? "desc") === "asc" ? "asc" as const : "desc" as const;
 
   const where: Record<string, unknown> = {};
   if (category) where.category = category;
