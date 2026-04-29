@@ -138,7 +138,7 @@ feedbackRouter.patch("/:id/status", requireAuth, async (req: AuthenticatedReques
   }
 
   const fb = await prisma.feedback.update({
-    where: { id: req.params.id },
+    where: { id: String(req.params.id) },
     data: { status: status as "OPEN" | "UNDER_REVIEW" | "PLANNED" | "DONE" | "CLOSED" },
   });
 
@@ -151,7 +151,7 @@ feedbackRouter.patch("/:id/status", requireAuth, async (req: AuthenticatedReques
 feedbackRouter.post("/:id/vote", requireAuth, async (req: AuthenticatedRequest, res) => {
   if (!req.user) { res.status(401).json({ message: "Unauthorized" }); return; }
 
-  const feedbackId = req.params.id;
+  const feedbackId = String(req.params.id);
   const userId = req.user.id;
 
   const existing = await prisma.feedbackVote.findUnique({
@@ -183,7 +183,7 @@ feedbackRouter.post("/:id/comments", requireAuth, async (req: AuthenticatedReque
 
   const comment = await prisma.feedbackComment.create({
     data: {
-      feedbackId: req.params.id,
+      feedbackId: String(req.params.id),
       authorId: req.user.id,
       body: body.trim(),
     },
@@ -209,7 +209,7 @@ feedbackRouter.delete("/:id/comments/:commentId", requireAuth, async (req: Authe
   if (!req.user) { res.status(401).json({ message: "Unauthorized" }); return; }
 
   const comment = await prisma.feedbackComment.findUnique({
-    where: { id: req.params.commentId },
+    where: { id: String(req.params.commentId) },
   });
 
   if (!comment) {
@@ -222,7 +222,7 @@ feedbackRouter.delete("/:id/comments/:commentId", requireAuth, async (req: Authe
     return;
   }
 
-  await prisma.feedbackComment.delete({ where: { id: req.params.commentId } });
+  await prisma.feedbackComment.delete({ where: { id: String(req.params.commentId) } });
   res.json({ deleted: true });
 });
 
@@ -232,7 +232,7 @@ feedbackRouter.delete("/:id/comments/:commentId", requireAuth, async (req: Authe
 feedbackRouter.delete("/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   if (!req.user) { res.status(401).json({ message: "Unauthorized" }); return; }
 
-  const fb = await prisma.feedback.findUnique({ where: { id: req.params.id } });
+  const fb = await prisma.feedback.findUnique({ where: { id: String(req.params.id) } });
   if (!fb) {
     res.status(404).json({ message: "Feedback not found" });
     return;
@@ -243,6 +243,6 @@ feedbackRouter.delete("/:id", requireAuth, async (req: AuthenticatedRequest, res
     return;
   }
 
-  await prisma.feedback.delete({ where: { id: req.params.id } });
+  await prisma.feedback.delete({ where: { id: String(req.params.id) } });
   res.json({ deleted: true });
 });
