@@ -123,7 +123,7 @@ export function Header() {
           closeMobileMenu();
         }),
     },
-    // Archived Items
+    // Archived Items (repairers see their own; others see all)
     {
       key: "archived",
       label: t("archivedItems"),
@@ -133,7 +133,7 @@ export function Header() {
         guardUnsavedChanges(() => {
           setAdminTab("none");
           setShowFunctionHub(false);
-          void loadRepairs("all", searchText, 1, sort, "archived", true, {});
+          void loadRepairs(canCreateRepair ? "all" : "my", searchText, 1, sort, "archived", true, {});
           closeMobileMenu();
         }),
     },

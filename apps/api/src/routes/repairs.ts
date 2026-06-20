@@ -299,7 +299,11 @@ repairsRouter.get("/", async (req: AuthenticatedRequest, res) => {
   const sortDir = String(req.query.sortDir ?? "desc").toLowerCase() === "asc" ? "asc" : "desc";
   const user = req.user!;
   const canViewAll = hasPermission(user.roles, "repairs:view_all");
-  const canViewArchived = hasPermission(user.roles, "repairs:create");
+  // Repairers can view archived/completed repairs too (scoped to their own on the
+  // client). Anyone who can create repairs or work on repairs may see the archive.
+  const canViewArchived =
+    hasPermission(user.roles, "repairs:create") ||
+    hasPermission(user.roles, "repairs:edit_repair_fields");
 
   const whereClauses: any[] = [];
   if (archived) {

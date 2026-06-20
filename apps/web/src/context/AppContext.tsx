@@ -807,8 +807,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const canCreateRepair = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "POS_USER"));
   const canEditCustomerIntake = isAdmin || isSupervisor || canCreateRepair;
   const canUseFunctionHub = canCreateRepair;
-  const canViewArchivedItems = canCreateRepair;
   const canEditRepairFields = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER"));
+  // Repairers can view their own completed/archived repairs (scoped to "my" below).
+  const canViewArchivedItems = canCreateRepair || canEditRepairFields;
   const canEditIntakeFields = canEditCustomerIntake;
   const canEditOutcomeFields = canEditRepairFields || canCreateRepair;
   const canAssignRepairs = Boolean(user?.roles.some((role) => role === "ADMIN" || role === "SUPERVISOR" || role === "REPAIRER" || role === "POS_USER"));
