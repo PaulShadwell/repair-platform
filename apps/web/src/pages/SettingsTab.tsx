@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useAppContext, DEFAULT_LOGO_SRC } from "../context/AppContext";
+import { useAppContext, DEFAULT_LOGO_SRC, WEBUSB_PRINTER_ID } from "../context/AppContext";
 
 export function SettingsTab() {
   const { t } = useTranslation();
@@ -26,7 +26,12 @@ export function SettingsTab() {
     formatPrinterStatus,
     printerStatusBadgeClass,
     formatDisplayDateTime,
+    webUsbSupported,
+    usbPrinterName,
+    connectUsbPrinter,
   } = useAppContext();
+
+  const usbSelected = selectedPrinterProfileId === WEBUSB_PRINTER_ID;
 
   return (
     <div className="admin-tab-content">
@@ -87,6 +92,9 @@ export function SettingsTab() {
             onChange={(event) => onPrinterProfileChange(event.target.value)}
           >
             <option value="">Default</option>
+            {webUsbSupported && (
+              <option value={WEBUSB_PRINTER_ID}>{t("usbPrinterOption")}</option>
+            )}
             {printerProfiles.map((profile) => (
               <option key={profile.id} value={profile.id}>
                 {profile.name}
@@ -95,7 +103,23 @@ export function SettingsTab() {
           </select>
         </label>
       </div>
-      {canGeneratePairCode && (
+      {usbSelected && (
+        <div className="usb-printer-panel">
+          <p className="field-help">{t("usbPrinterHelp")}</p>
+          <div className="printer-readiness-row">
+            <span>{t("printerReadinessLabel")}</span>
+            <span className={printerStatusBadgeClass(usbPrinterName ? "ONLINE" : "OFFLINE")}>
+              {usbPrinterName
+                ? t("usbPrinterConnected", { name: usbPrinterName })
+                : t("usbPrinterNotConnected")}
+            </span>
+          </div>
+          <button type="button" onClick={() => void connectUsbPrinter()}>
+            {usbPrinterName ? t("usbReconnectPrinter") : t("usbConnectPrinter")}
+          </button>
+        </div>
+      )}
+      {!usbSelected && canGeneratePairCode && (
         <button
           type="button"
           disabled={!selectedPrinterProfileId || busyActions.generatePairCode}

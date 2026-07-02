@@ -10,6 +10,14 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { api, setApiToken, setUnauthorizedHandler } from "../api";
+import {
+  decodeBase64Payload,
+  getPairedUsbPrinter,
+  isWebUsbSupported,
+  printViaWebUsb,
+  requestUsbPrinter,
+  usbPrinterDisplayName,
+} from "../services/webUsbPrinter";
 import type {
   Assignee,
   DashboardMetrics,
@@ -41,6 +49,8 @@ export const ARTICLE_TYPE_OPTIONS = [
 ] as const;
 export const DEFAULT_LOGO_SRC = "/repair-kafi-logo-v3.png";
 export const DEFAULT_APP_NAME = "Repair Platform";
+// Pseudo printer-profile id meaning "USB printer attached to this computer via WebUSB".
+export const WEBUSB_PRINTER_ID = "__webusb__";
 
 // ---------------------------------------------------------------------------
 // Local types
@@ -373,6 +383,9 @@ export type AppContextValue = {
   latestPairingCode: string;
   setLatestPairingCode: React.Dispatch<React.SetStateAction<string>>;
   selectedPrinterProfile: PrinterProfile | null;
+  webUsbSupported: boolean;
+  usbPrinterName: string | null;
+  connectUsbPrinter: () => Promise<void>;
 
   // ---- Photo state ----
   photoPreviewUrls: Record<string, string>;
@@ -756,6 +769,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => localStorage.getItem("rp_printer_profile_id") ?? "",
   );
   const [latestPairingCode, setLatestPairingCode] = useState<string>("");
+  const webUsbSupported = useMemo(() => isWebUsbSupported(), []);
+  const [usbPrinterName, setUsbPrinterName] = useState<string | null>(null);
 
   // ---- Photo state ----
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<Record<string, string>>({});
@@ -1085,6 +1100,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLatestPairingCode("");
   }
 
+  async function connectUsbPrinter(): Promise<void> {
+    try {
+      const device = await requestUsbPrinter();
+      setUsbPrinterName(usbPrinterDisplayName(device));
+      showToast(t("usbPrinterConnected", { name: usbPrinterDisplayName(device) }));
+    } catch (error: unknown) {
+      // User cancelling the picker throws NotFoundError; stay quiet for that.
+      const name = (error as { name?: string })?.name;
+      if (name === "NotFoundError") return;
+      const msg = error instanceof Error ? error.message : String(error);
+      showToast(t("usbConnectFailed", { message: msg }), "error");
+    }
+  }
+
   function showToast(text: string, type: "success" | "error" | "info" = "success"): void {
     setMessage(text);
     setMessageType(type);
@@ -1407,6 +1436,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPrinterProfiles(response.data.printers);
       if (
         selectedPrinterProfileId &&
+        selectedPrinterProfileId !== WEBUSB_PRINTER_ID &&
         !response.data.printers.some((p) => p.id === selectedPrinterProfileId)
       ) {
         setSelectedPrinterProfileId("");
@@ -1751,6 +1781,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function printLabel(repairId: string): Promise<void> {
+    if (selectedPrinterProfileId === WEBUSB_PRINTER_ID) {
+      await printLabelViaWebUsb(repairId);
+      return;
+    }
     setBusy("printLabel", true);
     try {
       const response = await api.post<{
@@ -1786,6 +1820,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ? ((error as { response: { data: { message: string } } }).response.data.message)
           : t("labelPrintingFailed");
       showToast(maybeMessage, "error");
+    } finally {
+      setBusy("printLabel", false);
+    }
+  }
+
+  async function printLabelViaWebUsb(repairId: string): Promise<void> {
+    if (!webUsbSupported) {
+      showToast(t("usbNotSupported"), "error");
+      return;
+    }
+    setBusy("printLabel", true);
+    try {
+      // Reuse a previously granted device; show the picker only when needed.
+      let device = await getPairedUsbPrinter();
+      if (!device) {
+        device = await requestUsbPrinter();
+      }
+      setUsbPrinterName(usbPrinterDisplayName(device));
+
+      const response = await api.post<{ bytes: number; payloadBase64: string }>(
+        `/repairs/${repairId}/print-label`,
+        { dryRun: false, printerProfileId: null, delivery: "browser" },
+      );
+      await printViaWebUsb(device, decodeBase64Payload(response.data.payloadBase64));
+      showToast(t("labelSentToPrinter", { bytes: response.data.bytes }));
+    } catch (error: unknown) {
+      const errName = (error as { name?: string })?.name;
+      if (errName === "NotFoundError") {
+        // User dismissed the device picker.
+        showToast(t("usbPrinterNotSelected"), "info");
+        return;
+      }
+      const msg = error instanceof Error ? error.message : t("labelPrintingFailed");
+      showToast(t("usbPrintFailed", { message: msg }), "error");
     } finally {
       setBusy("printLabel", false);
     }
@@ -2266,6 +2334,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Load branding on mount
+  // Restore a previously granted WebUSB printer (no picker needed after first pairing)
+  useEffect(() => {
+    if (!webUsbSupported) return;
+    void getPairedUsbPrinter().then((device) => {
+      if (device) setUsbPrinterName(usbPrinterDisplayName(device));
+    }).catch(() => { /* stay disconnected */ });
+  }, [webUsbSupported]);
+
   useEffect(() => {
     api.get<Record<string, string>>("/branding").then((res) => {
       if (res.data.appName) setBrandAppName(res.data.appName);
@@ -2881,6 +2957,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     latestPairingCode,
     setLatestPairingCode,
     selectedPrinterProfile,
+    webUsbSupported,
+    usbPrinterName,
+    connectUsbPrinter,
 
     // Photo state
     photoPreviewUrls,

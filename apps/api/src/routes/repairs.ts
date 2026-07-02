@@ -76,6 +76,10 @@ const workUpdateSchema = z.object({
 const printSchema = z.object({
   printerProfileId: z.string().uuid().nullable().optional(),
   dryRun: z.boolean().optional(),
+  // "server" (default): deliver via spool/system/relay/tcp/agent as configured.
+  // "browser": skip server-side delivery and return the raw ESC/POS payload so
+  // the web client can print directly to a USB printer via WebUSB.
+  delivery: z.enum(["server", "browser"]).optional(),
 });
 
 const translationQuerySchema = z.object({
@@ -1291,6 +1295,28 @@ repairsRouter.post("/:id/print-label", async (req: AuthenticatedRequest, res) =>
       feedLines: printer?.feedLines ?? 4,
     },
   );
+
+  if (parsed.data.delivery === "browser") {
+    // Browser handles delivery via WebUSB; just log and hand back the bytes.
+    await prisma.printLog.create({
+      data: {
+        repairId: repair.id,
+        printerProfileId: printer?.id ?? null,
+        printedById: req.user!.id,
+        payloadBytes: payload.byteLength,
+        success: true,
+        errorMessage: null,
+      },
+    });
+    res.json({
+      ok: true,
+      bytes: payload.byteLength,
+      payloadBase64: payload.toString("base64"),
+      delivery: "browser",
+      dryRun: Boolean(parsed.data.dryRun),
+    });
+    return;
+  }
 
   let success = true;
   let spoolPath: string | undefined;
