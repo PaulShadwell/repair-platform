@@ -13,7 +13,7 @@ import type { AnalyticsOverview, AnalyticsTrend } from "../types";
 
 export function AnalyticsDashboard() {
   const { t } = useTranslation();
-  const { formatStatus } = useAppContext();
+  const { formatStatus, formatArticleType } = useAppContext();
 
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [trends, setTrends] = useState<AnalyticsTrend[]>([]);
@@ -225,7 +225,7 @@ export function AnalyticsDashboard() {
                 const pct = ((row.count / maxCount) * 100).toFixed(1);
                 return (
                   <div key={row.type} className="breakdown-row">
-                    <span className="breakdown-label">{row.type}</span>
+                    <span className="breakdown-label">{formatArticleType(row.type)}</span>
                     <div className="breakdown-bar-track">
                       <div className="breakdown-bar-fill article" style={{ width: `${pct}%` }} />
                     </div>

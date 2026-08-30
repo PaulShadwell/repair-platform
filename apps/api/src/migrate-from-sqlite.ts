@@ -33,6 +33,40 @@ function mapOutcome(raw: unknown): "YES" | "PARTIAL" | "NO" | null {
   return null;
 }
 
+// Official repair-cafe.ch categories. Must stay in sync with
+// ARTICLE_TYPE_OPTIONS in the web app and the 20260830190000 data migration.
+const COMPUTER_KEYWORDS = [
+  "laptop", "notebook", "computer", "drucker", "printer", "monitor", "bildschirm", "tastatur", "scanner",
+];
+const HOUSEHOLD_KEYWORDS = [
+  "staubsauger", "sauger", "wasserkocher", "kocher", "bügeleisen", "nähmaschine", "kaffee", "ventilator",
+  "toaster", "mixer", "föhn", "zahnbürste", "lampe", "leuchte", "licht", "warmhalte", "wamhalte",
+  "waffeleisen", "bartschneider",
+];
+
+function mapProductType(legacyType: string | null, itemName: unknown): string | null {
+  if (!legacyType) return null;
+  switch (legacyType) {
+    case "Textil":
+      return "TextileLeather";
+    case "Holz":
+      return "WoodMetalMechanics";
+    case "Allerlei":
+    case "Anderes":
+      return "Miscellaneous";
+    case "Elektro":
+      return "HouseholdAppliances";
+    case "Elektronik": {
+      const item = String(itemName ?? "").toLowerCase();
+      if (COMPUTER_KEYWORDS.some((kw) => item.includes(kw))) return "ComputerLaptop";
+      if (HOUSEHOLD_KEYWORDS.some((kw) => item.includes(kw))) return "HouseholdAppliances";
+      return "PhoneTabletEntertainment";
+    }
+    default:
+      return legacyType;
+  }
+}
+
 async function main(): Promise<void> {
   const sqlitePathArg = process.argv[2];
   if (!sqlitePathArg) {
@@ -125,7 +159,7 @@ async function main(): Promise<void> {
     const assignedToUserId = assignedName ? usersByName.get(String(assignedName).toLowerCase()) ?? null : null;
     const progressEntry = progressMap.get(Number(row.progress));
     const status = mapStatus(progressEntry?.status);
-    const productType = row.art ? typeMap.get(Number(row.art)) ?? null : null;
+    const productType = mapProductType(row.art ? typeMap.get(Number(row.art)) ?? null : null, row.gegenstand);
     const successful = mapSuccess(row.gelungen);
     const outcome = mapOutcome(row.gelungen);
 

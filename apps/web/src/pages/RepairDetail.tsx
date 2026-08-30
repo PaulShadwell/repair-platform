@@ -252,12 +252,12 @@ export function RepairDetail() {
   }, [repairWorkForm.status, repairWorkForm.outcome, t]);
 
   const ARTICLE_TYPE_OPTIONS = [
-    "Assortment",
-    "Textile",
-    "Electronics",
-    "Electrical",
-    "Wood",
-    "Other",
+    "Miscellaneous",
+    "PhoneTabletEntertainment",
+    "ComputerLaptop",
+    "HouseholdAppliances",
+    "WoodMetalMechanics",
+    "TextileLeather",
   ] as const;
 
   if (!selectedRepair) {

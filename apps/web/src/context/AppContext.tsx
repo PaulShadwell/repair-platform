@@ -39,13 +39,14 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 export const ROLE_OPTIONS: UserRoleKey[] = ["ADMIN", "SUPERVISOR", "POS_USER", "REPAIRER"];
+// Official repair-cafe.ch categories (order matches the official website).
 export const ARTICLE_TYPE_OPTIONS = [
-  "Assortment",
-  "Textile",
-  "Electronics",
-  "Electrical",
-  "Wood",
-  "Other",
+  "Miscellaneous",
+  "PhoneTabletEntertainment",
+  "ComputerLaptop",
+  "HouseholdAppliances",
+  "WoodMetalMechanics",
+  "TextileLeather",
 ] as const;
 export const DEFAULT_LOGO_SRC = "/repair-kafi-logo-v3.png";
 export const DEFAULT_APP_NAME = "Repair Platform";
