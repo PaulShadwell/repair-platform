@@ -19,7 +19,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends fonts-dejavu-core \
+  && apt-get install -y --no-install-recommends fonts-dejavu-core openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/package*.json ./

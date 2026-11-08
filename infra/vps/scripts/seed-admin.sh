@@ -10,7 +10,7 @@ ENV_FILE="$HERE/tenants/$NAME.env"
 export COMPOSE_PROJECT_NAME="$NAME"
 
 docker compose -f "$HERE/tenant/docker-compose.yml" --env-file "$ENV_FILE" run --rm \
-  -e SEED_USERNAME="$USERNAME" -e SEED_PASSWORD="$PASSWORD" --entrypoint node api -e '
+  -e SEED_USERNAME="$USERNAME" -e SEED_PASSWORD="$PASSWORD" --workdir /app/apps/api --entrypoint node api -e '
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 (async () => {
