@@ -6,16 +6,28 @@ on:
   push:
     branches: [main, master]
   workflow_dispatch:
+    inputs:
+      arm64:
+        description: "Also build linux/arm64 (Raspberry Pi cluster). Slow: QEMU emulation."
+        type: boolean
+        default: false
 
 permissions:
   contents: read
   packages: write
+
+# A newer push to the same branch cancels the build still running for the previous commit.
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     env:
       REGISTRY: ghcr.io
+      # Pushes build amd64 only (VPS). arm64 is opt-in via "Run workflow" for the Pi cluster.
+      PLATFORMS: ${{ github.event_name == 'workflow_dispatch' && inputs.arm64 && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +41,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Set up QEMU (for arm64 cross-build)
+        if: contains(env.PLATFORMS, 'arm64')
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -55,8 +68,10 @@ jobs:
         with:
           context: .
           file: Dockerfile.api
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.PLATFORMS }}
           push: true
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
           tags: |
             ${{ steps.registry.outputs.image_api }}:latest
             ${{ steps.registry.outputs.image_api }}:${{ steps.meta.outputs.short_sha }}
@@ -67,8 +82,10 @@ jobs:
         with:
           context: .
           file: Dockerfile.web
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.PLATFORMS }}
           push: true
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
           build-args: |
             VITE_API_BASE_URL=/api
           tags: |

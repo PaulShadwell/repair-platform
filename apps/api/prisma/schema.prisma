@@ -1,5 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Runtime image is node:20-bookworm-slim (OpenSSL 3). Pin engines for amd64 (VPS) and arm64 (Pi cluster).
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {

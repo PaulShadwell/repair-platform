@@ -2,6 +2,11 @@ FROM node:20-bookworm-slim AS build
 
 WORKDIR /app
 
+# openssl lets `prisma generate` detect the OpenSSL version so the engine matches the runtime stage
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY package*.json ./
 COPY apps/api/package*.json apps/api/
 COPY apps/web/package*.json apps/web/
