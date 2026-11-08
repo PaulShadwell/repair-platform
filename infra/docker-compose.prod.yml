@@ -101,7 +101,7 @@ services:
     entrypoint:
       - sh
       - -c
-      - npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
+      - cd apps/api && npx prisma migrate deploy
     restart: "no"
 
 volumes:

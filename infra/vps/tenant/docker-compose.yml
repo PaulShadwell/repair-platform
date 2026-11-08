@@ -70,7 +70,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-repair_platform}
-    entrypoint: ["sh", "-c", "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma"]
+    entrypoint: ["sh", "-c", "cd apps/api && npx prisma migrate deploy"]
     restart: "no"
 
 networks:

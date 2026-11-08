@@ -36,10 +36,12 @@ mkdir -p /srv/backups
 
 cat <<'MSG'
 
-Server ready. Next:
-  1. cd /srv/repair-platform/infra/vps/caddy && docker compose up -d
-  2. scripts/new-tenant.sh turbenthal turbenthal.rctrepairs.ch
-  3. scripts/deploy.sh turbenthal
-  4. (optional) docker login ghcr.io   if the GHCR packages are private
-  5. crontab: 30 3 * * * /srv/repair-platform/infra/vps/scripts/backup.sh
+Server ready. Next (DNS A records must already point at this server):
+  1. (cd /srv/repair-platform/infra/vps/caddy && docker compose up -d)
+  2. (optional) docker login ghcr.io   if the GHCR packages are private
+  3. cd /srv/repair-platform/infra/vps
+  4. scripts/new-tenant.sh turbenthal turbenthal.rctrepairs.ch
+  5. scripts/deploy.sh turbenthal
+  6. scripts/seed-admin.sh turbenthal
+  7. crontab: 30 3 * * * /srv/repair-platform/infra/vps/scripts/backup.sh >> /var/log/repair-backup.log 2>&1
 MSG
