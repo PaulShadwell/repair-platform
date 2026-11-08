@@ -1,0 +1,31 @@
+# Shared reverse proxy for all Repair Cafe tenants on this VPS.
+# One Caddy, one Let's Encrypt account, one external Docker network ("edge").
+#
+#   docker network create edge        # once
+#   cd /srv/repair-platform/infra/vps/caddy
+#   docker compose up -d
+#
+# Tenant stacks join the "edge" network and expose their web container as <tenant>-web.
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: edge-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+
+networks:
+  edge:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

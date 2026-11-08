@@ -1,0 +1,26 @@
+# One block per tenant. The upstream is the tenant's web container alias on the "edge" network.
+# Add a block + DNS A/AAAA record for every new Repair Cafe (scripts/new-tenant.sh prints it).
+
+(tenant) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	reverse_proxy {args[0]}:80
+}
+
+turbenthal.rctrepairs.ch {
+	import tenant turbenthal-web
+}
+
+seuzach.rctrepairs.ch {
+	import tenant seuzach-web
+}
+
+# Optional: bare domain → landing page or redirect to the main café
+rctrepairs.ch, www.rctrepairs.ch {
+	redir https://turbenthal.rctrepairs.ch{uri} permanent
+}

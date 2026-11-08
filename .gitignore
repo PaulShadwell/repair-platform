@@ -8,3 +8,5 @@ apps/api/storage/
 tools/print-agent/packages/
 tools/print-agent/release-assets/
 tools/print-relay/spool/
+infra/vps/tenants/*.env
+!infra/vps/tenants/example.env

@@ -473,7 +473,9 @@ export type AppContextValue = {
     syncUrl?: boolean,
     nextFilters?: { status?: string; notified?: boolean },
   ) => Promise<void>;
-  createRepair: () => Promise<void>;
+  createRepair: (options?: { printLabel?: boolean }) => Promise<void>;
+  lastCreatedRepair: Repair | null;
+  setLastCreatedRepair: React.Dispatch<React.SetStateAction<Repair | null>>;
   createRepairer: () => Promise<void>;
   saveRepairIntake: (repairId: string) => Promise<void>;
   saveRepairWork: (repairId: string) => Promise<void>;
@@ -671,6 +673,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     technicianNotes: string;
   } | null>(null);
   const [customerHistoryMatches, setCustomerHistoryMatches] = useState<Repair[]>([]);
+  const [lastCreatedRepair, setLastCreatedRepair] = useState<Repair | null>(null);
   const [isLoadingCustomerHistory, setIsLoadingCustomerHistory] = useState<boolean>(false);
   const [hasQueriedCustomerHistory, setHasQueriedCustomerHistory] = useState<boolean>(false);
 
@@ -848,7 +851,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addRepairHasUnsavedChanges =
     adminTab === "addRepair" &&
-    Object.values(newRepair).some((value) => String(value).trim().length > 0);
+    Object.entries(newRepair).some(
+      ([key, value]) => key !== "createdDate" && String(value).trim().length > 0,
+    );
   const addUserHasUnsavedChanges =
     adminTab === "addRepairer" &&
     (newRepairer.username.trim().length > 0 ||
@@ -1260,8 +1265,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       city: repair.city ?? "",
       email: repair.email ?? "",
       phone: repair.phone ?? "",
-      itemName: "",
-      problemDescription: "",
+      // Repair fields (itemName, problemDescription, productType, ...) are intentionally
+      // left untouched so the POS user can fill the form in any order.
     }));
     showToast(t("customerHistoryApplied"), "success");
   }
@@ -1586,7 +1591,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function createRepair(): Promise<void> {
+  async function createRepair(options?: { printLabel?: boolean }): Promise<void> {
     const missing: string[] = [];
     if (!newRepair.firstName.trim()) missing.push(t("firstName"));
     if (!newRepair.lastName.trim()) missing.push(t("lastName"));
@@ -1604,7 +1609,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     setBusy("createRepair", true);
     try {
-      await api.post("/repairs", {
+      const response = await api.post<{ repair: Repair }>("/repairs", {
         productType: newRepair.productType || undefined,
         createdDate: newRepair.createdDate ? new Date(newRepair.createdDate).toISOString() : undefined,
         firstName: newRepair.firstName || undefined,
@@ -1618,6 +1623,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         assignedToUserId: newRepair.assignedToUserId || null,
         customerId: newRepair.customerId.trim() || undefined,
       });
+      const created = response.data.repair;
+      setLastCreatedRepair(created);
       setNewRepair({
         productType: "",
         createdDate: dateInputTodayLocal(),
@@ -1632,9 +1639,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         assignedToUserId: "",
         customerId: "",
       });
+      setCustomerHistoryMatches([]);
+      setHasQueriedCustomerHistory(false);
       await loadRepairs(scope, searchText, 1, sort, viewMode, false, listFilters);
       if (isAdmin) void loadMetrics();
       showToast(t("repairCreated"));
+      if (options?.printLabel && created?.id) {
+        await printLabel(created.id);
+      }
     } finally {
       setBusy("createRepair", false);
     }
@@ -2611,6 +2623,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setCustomerHistoryMatches([]);
       setIsLoadingCustomerHistory(false);
       setHasQueriedCustomerHistory(false);
+      setLastCreatedRepair(null);
       return;
     }
 
@@ -3040,6 +3053,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     logout,
     loadRepairs,
     createRepair,
+    lastCreatedRepair,
+    setLastCreatedRepair,
     createRepairer,
     saveRepairIntake,
     saveRepairWork,

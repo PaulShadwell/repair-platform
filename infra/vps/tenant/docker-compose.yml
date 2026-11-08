@@ -1,0 +1,83 @@
+# One Repair Cafe tenant = one Compose project with its own PostgreSQL, API, web and storage.
+# Never run this file directly; use scripts/deploy.sh <tenant>, which sets:
+#   COMPOSE_PROJECT_NAME=<tenant>  and  --env-file ../tenants/<tenant>.env
+#
+# Images come from GHCR by default (built by .github/workflows/docker-publish.yml).
+# Override IMAGE_API / IMAGE_WEB / IMAGE_TAG in the tenant env file to pin a version.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the tenant env file}
+      POSTGRES_DB: ${POSTGRES_DB:-repair_platform}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-repair_platform}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ${IMAGE_API:-ghcr.io/paulshadwell/repair-platform/api}:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-repair_platform}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the tenant env file}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30d}
+      CORS_ORIGIN: https://${TENANT_HOST:?Set TENANT_HOST in the tenant env file}
+      PUBLIC_BASE_URL: https://${TENANT_HOST}
+      PHOTO_STORAGE_DIR: /app/storage/photos
+      PRINT_SPOOL_DIR: /app/storage/print-spool
+      DEFAULT_PRINTER_MODE: ${DEFAULT_PRINTER_MODE:-spool}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    volumes:
+      - api_storage:/app/storage
+    networks:
+      default:
+        aliases:
+          - repair-platform-api   # nginx.conf in the web image proxies /api to this name
+
+  web:
+    image: ${IMAGE_WEB:-ghcr.io/paulshadwell/repair-platform/web}:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      default: {}
+      edge:
+        aliases:
+          - ${TENANT_NAME:?Set TENANT_NAME in the tenant env file}-web   # Caddy upstream
+
+  migrate:
+    image: ${IMAGE_API:-ghcr.io/paulshadwell/repair-platform/api}:${IMAGE_TAG:-latest}
+    profiles: ["migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-repair_platform}
+    entrypoint: ["sh", "-c", "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma"]
+    restart: "no"
+
+networks:
+  default: {}
+  edge:
+    external: true
+
+volumes:
+  postgres_data:
+  api_storage:

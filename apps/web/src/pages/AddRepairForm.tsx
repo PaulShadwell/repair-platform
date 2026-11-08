@@ -1,9 +1,10 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus } from "lucide-react";
+import { Plus, Printer, ExternalLink, CheckCircle2, Eraser } from "lucide-react";
 import { useAppContext, ARTICLE_TYPE_OPTIONS } from "../context/AppContext";
 import { FormField } from "../components/FormField";
 import { Spinner } from "../components/Spinner";
+import { Modal } from "../components/Modal";
 
 type FieldErrors = Record<string, string>;
 
@@ -29,10 +30,27 @@ export function AddRepairForm() {
     formatCustomerFullName,
     formatRepairRef,
     formatStatus,
+    lastCreatedRepair,
+    setLastCreatedRepair,
+    printLabel,
+    openRepairDetail,
+    setAdminTab,
   } = useAppContext();
 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const formHasContent = Object.entries(newRepair).some(
+    ([key, value]) => key !== "createdDate" && String(value).trim().length > 0,
+  );
+
+  const handleClearForm = useCallback(() => {
+    resetNewRepairForm();
+    setErrors({});
+    setTouched({});
+    setShowClearConfirm(false);
+  }, [resetNewRepairForm]);
 
   const validate = useCallback(
     (field: string, value: string): string => {
@@ -71,7 +89,7 @@ export function AddRepairForm() {
     [setNewRepair, touched, validate],
   );
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback((options?: { printLabel?: boolean }) => {
     const requiredFields = ["firstName", "lastName", "phone", "productType", "itemName", "problemDescription"];
     const newErrors: FieldErrors = {};
     const newTouched: Record<string, boolean> = {};
@@ -89,13 +107,60 @@ export function AddRepairForm() {
     }
     setTouched((prev) => ({ ...prev, ...newTouched }));
     setErrors((prev) => ({ ...prev, ...newErrors }));
-    if (Object.values(newErrors).some(Boolean)) return;
-    void createRepair();
+    const firstInvalid = Object.keys(newErrors).find((field) => newErrors[field]);
+    if (firstInvalid) {
+      const el = document.querySelector<HTMLElement>(`[data-field="${firstInvalid}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      el?.focus();
+      return;
+    }
+    setTouched({});
+    setErrors({});
+    void createRepair(options);
   }, [newRepair, validate, createRepair]);
 
   return (
     <div className="admin-tab-content">
       <h3>{t("addRepair")}</h3>
+      {lastCreatedRepair && (
+        <div className="add-repair-success" role="status">
+          <div className="add-repair-success-text">
+            <CheckCircle2 size={20} />
+            <div>
+              <strong>
+                {t("repairCreatedHeadline", { ref: formatRepairRef(lastCreatedRepair) })}
+              </strong>
+              <div className="field-help">
+                {formatCustomerFullName(lastCreatedRepair)}
+                {lastCreatedRepair.itemName ? ` · ${lastCreatedRepair.itemName}` : ""}
+              </div>
+            </div>
+          </div>
+          <div className="add-repair-success-actions">
+            <button
+              type="button"
+              disabled={busyActions.printLabel}
+              onClick={() => void printLabel(lastCreatedRepair.id)}
+            >
+              <Printer size={14} /> {busyActions.printLabel ? t("loadingPrintLabel") : t("printLabel")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const id = lastCreatedRepair.id;
+                setLastCreatedRepair(null);
+                setAdminTab("none");
+                openRepairDetail(id);
+              }}
+            >
+              <ExternalLink size={14} /> {t("openRepair")}
+            </button>
+            <button type="button" className="btn-quiet" onClick={() => setLastCreatedRepair(null)}>
+              {t("dismiss")}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="add-repair-section">
         <h4 className="add-repair-section-title">{t("sectionCustomerDetails")}</h4>
         <div className="add-repair-grid">
@@ -105,6 +170,7 @@ export function AddRepairForm() {
             error={touched.firstName ? errors.firstName : undefined}
           >
             <input
+              data-field="firstName"
               value={newRepair.firstName}
               onChange={(e) => handleChange("firstName", e.target.value)}
               onBlur={() => handleBlur("firstName")}
@@ -116,6 +182,7 @@ export function AddRepairForm() {
             error={touched.lastName ? errors.lastName : undefined}
           >
             <input
+              data-field="lastName"
               value={newRepair.lastName}
               onChange={(e) => handleChange("lastName", e.target.value)}
               onBlur={() => handleBlur("lastName")}
@@ -150,6 +217,7 @@ export function AddRepairForm() {
             error={touched.phone ? errors.phone : undefined}
           >
             <input
+              data-field="phone"
               value={newRepair.phone}
               onChange={(e) => handleChange("phone", e.target.value)}
               onBlur={() => handleBlur("phone")}
@@ -213,6 +281,7 @@ export function AddRepairForm() {
             error={touched.productType ? errors.productType : undefined}
           >
             <select
+              data-field="productType"
               value={newRepair.productType}
               onChange={(e) => handleChange("productType", e.target.value)}
               onBlur={() => handleBlur("productType")}
@@ -239,6 +308,7 @@ export function AddRepairForm() {
             error={touched.itemName ? errors.itemName : undefined}
           >
             <input
+              data-field="itemName"
               value={newRepair.itemName}
               onChange={(e) => handleChange("itemName", e.target.value)}
               onBlur={() => handleBlur("itemName")}
@@ -250,7 +320,9 @@ export function AddRepairForm() {
             wide
             error={touched.problemDescription ? errors.problemDescription : undefined}
           >
-            <input
+            <textarea
+              data-field="problemDescription"
+              rows={3}
               value={newRepair.problemDescription}
               onChange={(e) => handleChange("problemDescription", e.target.value)}
               onBlur={() => handleBlur("problemDescription")}
@@ -275,25 +347,46 @@ export function AddRepairForm() {
       </div>
       <div className="add-repair-actions">
         <button
-          className="add-repair-submit"
-          disabled={busyActions.createRepair}
-          onClick={handleSubmit}
+          type="button"
+          className="add-repair-submit btn-primary"
+          disabled={busyActions.createRepair || busyActions.printLabel}
+          onClick={() => handleSubmit({ printLabel: true })}
         >
-          {busyActions.createRepair ? (
-            <Spinner size={14} />
-          ) : (
-            <Plus size={14} />
-          )}{" "}
-          {busyActions.createRepair ? t("loadingCreateRepair") : t("createRepair")}
+          {busyActions.createRepair ? <Spinner size={14} /> : <Printer size={14} />}{" "}
+          {busyActions.createRepair ? t("loadingCreateRepair") : t("createRepairAndPrint")}
         </button>
         <button
           type="button"
           className="add-repair-submit"
-          onClick={resetNewRepairForm}
+          disabled={busyActions.createRepair}
+          onClick={() => handleSubmit()}
         >
-          {t("clearForm")}
+          <Plus size={14} /> {t("createRepair")}
+        </button>
+        <button
+          type="button"
+          className="btn-quiet add-repair-clear"
+          disabled={!formHasContent}
+          onClick={() => setShowClearConfirm(true)}
+        >
+          <Eraser size={14} /> {t("clearForm")}
         </button>
       </div>
+      <Modal
+        open={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        title={t("clearFormConfirmTitle")}
+        actions={
+          <>
+            <button className="btn-danger" onClick={handleClearForm}>
+              {t("clearForm")}
+            </button>
+            <button onClick={() => setShowClearConfirm(false)}>{t("cancel")}</button>
+          </>
+        }
+      >
+        <p>{t("clearFormConfirmMessage")}</p>
+      </Modal>
     </div>
   );
 }
