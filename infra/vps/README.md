@@ -29,6 +29,26 @@ Sizing: VPS Lite 2 vCPU / 4 GB is enough for two tenants (each stack idles at ~2
 | `scripts/seed-admin.sh <tenant>` | Creates the first ADMIN user (forced password change) |
 | `scripts/backup.sh` / `restore.sh` | Nightly `pg_dump` + storage tar per tenant; optional rclone off-site sync |
 
+## Connecting to the VPS
+
+Host `83.228.217.85`, user `debian`, key `repair-sshkey` (on Paul's Mac; never commit it).
+
+```bash
+ssh -i ~/.ssh/repair-sshkey debian@83.228.217.85
+```
+
+Optional shortcut in `~/.ssh/config`, then just `ssh rctrepairs`:
+
+```
+Host rctrepairs
+    HostName 83.228.217.85
+    User debian
+    IdentityFile ~/.ssh/repair-sshkey
+```
+
+The checkout lives in `/srv/repair-platform` and is owned by root, so use `sudo` for `git pull`,
+the scripts and editing `infra/vps/tenants/*.env`.
+
 ## First-time setup
 
 ```bash
@@ -73,9 +93,12 @@ Then re-pair the print agents on the POS laptops against `https://turbenthal.rct
 `git push` to `main` builds new images via GitHub Actions. On the VPS:
 
 ```bash
-cd /srv/repair-platform && git pull
-infra/vps/scripts/deploy-all.sh          # or deploy.sh <tenant> to roll out one café first
+cd /srv/repair-platform && sudo git pull          # always first: brings new compose files and env settings
+sudo infra/vps/scripts/deploy-all.sh              # or deploy.sh <tenant> to roll out one café first
 ```
+
+`deploy.sh` does not pull the repo itself. Skipping `git pull` gives you new images running with the
+old compose file, so any newly added environment variable (e.g. `ANTHROPIC_API_KEY`) never reaches the containers.
 
 Pin `IMAGE_TAG=<short-sha>` in a tenant env file to hold a café on a known version.
 
@@ -87,4 +110,8 @@ Pin `IMAGE_TAG=<short-sha>` in a tenant env file to hold a café on a known vers
 - **Image updates**: `deploy-all.sh` is the only way images change; nothing auto-pulls.
 - **Logs**: `COMPOSE_PROJECT_NAME=turbenthal docker compose -f tenant/docker-compose.yml --env-file tenants/turbenthal.env logs -f api`
 - **Adding a café**: `new-tenant.sh`, DNS, Caddyfile block, `deploy.sh`, `seed-admin.sh` — about ten minutes.
+- **Auto-translation (DE↔EN)** of Item description / Problem uses Claude Haiku. Set `ANTHROPIC_API_KEY`
+  (and optionally `TRANSLATION_MODEL`) in each tenant env file; without a key the translation line is hidden.
+  Check it reached the container with `... exec api printenv ANTHROPIC_API_KEY | cut -c1-12`; API errors show
+  in the api logs as `[translation] ...` lines.
 - **Branding per café**: logo and app name are stored in each tenant's database (`SiteSetting`), set via the Settings tab.
