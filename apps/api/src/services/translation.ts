@@ -158,7 +158,6 @@ async function callClaude(
       body: JSON.stringify({
         model: config.translationModel,
         max_tokens: 2048,
-        temperature: 0,
         system: SYSTEM_PROMPT,
         tools: [TRANSLATION_TOOL],
         tool_choice: { type: "tool", name: TOOL_NAME },
