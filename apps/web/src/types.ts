@@ -212,3 +212,14 @@ export type PrinterProfile = {
   printerStatus?: "ONLINE" | "OFFLINE" | "UNKNOWN";
   lastSuccessfulPrintAt?: string | null;
 };
+
+export type RepairFieldTranslation = {
+  text: string;
+  sourceLang: "de" | "en" | "other";
+  targetLang: "de" | "en";
+};
+
+export type RepairTranslations = {
+  itemName: RepairFieldTranslation | null;
+  problemDescription: RepairFieldTranslation | null;
+};

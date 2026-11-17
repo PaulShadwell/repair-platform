@@ -29,6 +29,7 @@ import type {
   RepairMaterial,
   RepairsPagination,
   RepairsSort,
+  RepairTranslations,
   Supplier,
   UserRoleKey,
   User,
@@ -257,18 +258,8 @@ export type AppContextValue = {
     password: string;
     role: UserRoleKey;
   }>>;
-  translatedContent: {
-    itemName: string;
-    problemDescription: string;
-    fixDescription: string;
-    technicianNotes: string;
-  } | null;
-  setTranslatedContent: React.Dispatch<React.SetStateAction<{
-    itemName: string;
-    problemDescription: string;
-    fixDescription: string;
-    technicianNotes: string;
-  } | null>>;
+  translatedContent: RepairTranslations | null;
+  setTranslatedContent: React.Dispatch<React.SetStateAction<RepairTranslations | null>>;
   customerHistoryMatches: Repair[];
   setCustomerHistoryMatches: React.Dispatch<React.SetStateAction<Repair[]>>;
   isLoadingCustomerHistory: boolean;
@@ -666,12 +657,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     password: "",
     role: "REPAIRER" as UserRoleKey,
   });
-  const [translatedContent, setTranslatedContent] = useState<{
-    itemName: string;
-    problemDescription: string;
-    fixDescription: string;
-    technicianNotes: string;
-  } | null>(null);
+  const [translatedContent, setTranslatedContent] = useState<RepairTranslations | null>(null);
   const [customerHistoryMatches, setCustomerHistoryMatches] = useState<Repair[]>([]);
   const [lastCreatedRepair, setLastCreatedRepair] = useState<Repair | null>(null);
   const [isLoadingCustomerHistory, setIsLoadingCustomerHistory] = useState<boolean>(false);
@@ -2697,30 +2683,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void loadAllSuppliers();
   }, [adminTab]);
 
-  // Load translation for selected repair
+  // Load DE<->EN auto-translation (Item description / Problem) for selected repair.
+  // Re-fetched only when the repair or one of the two texts changes.
+  const translationRepairId = selectedRepair?.id;
+  const translationItemName = selectedRepair?.itemName;
+  const translationProblem = selectedRepair?.problemDescription;
   useEffect(() => {
-    if (!selectedRepair) {
-      setTranslatedContent(null);
-      return;
-    }
-    if (currentLang !== "en") {
+    if (!translationRepairId) {
       setTranslatedContent(null);
       return;
     }
 
-    const repairId = selectedRepair.id;
+    const repairId = translationRepairId;
     let cancelled = false;
     async function loadTranslation(): Promise<void> {
       try {
-        const response = await api.get<{
-          translation: {
-            itemName: string;
-            problemDescription: string;
-            fixDescription: string;
-            technicianNotes: string;
-          };
-        }>(`/repairs/${repairId}/translation`, { params: { targetLang: "en" } });
-        if (!cancelled) setTranslatedContent(response.data.translation);
+        const response = await api.get<{ enabled: boolean; translation: RepairTranslations }>(
+          `/repairs/${repairId}/translation`,
+        );
+        if (!cancelled) setTranslatedContent(response.data.enabled ? response.data.translation : null);
       } catch {
         if (!cancelled) setTranslatedContent(null);
       }
@@ -2729,7 +2710,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [selectedRepair, currentLang]);
+  }, [translationRepairId, translationItemName, translationProblem]);
 
   // Sync intake/work forms when selected repair changes
   useEffect(() => {

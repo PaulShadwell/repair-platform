@@ -24,4 +24,7 @@ export const config = {
   smtpUser: process.env.SMTP_USER ?? "",
   smtpPass: process.env.SMTP_PASS ?? "",
   smtpFrom: process.env.SMTP_FROM ?? "",
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  translationModel: process.env.TRANSLATION_MODEL ?? "claude-haiku-5-5",
+  translationTimeoutMs: Number(process.env.TRANSLATION_TIMEOUT_MS ?? 15000),
 };

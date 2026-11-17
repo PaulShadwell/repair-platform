@@ -44,6 +44,8 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      TRANSLATION_MODEL: ${TRANSLATION_MODEL:-claude-haiku-5-5}
     volumes:
       - api_storage:/app/storage
     networks:
