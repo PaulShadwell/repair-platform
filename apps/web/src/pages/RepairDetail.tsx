@@ -204,6 +204,7 @@ export function RepairDetail() {
     deleteRepairMaterial,
     uploadMaterialReceipt,
     removeMaterialReceipt,
+    viewMaterialReceipt,
     loadInventoryItems,
     formatRepairRef,
     formatCustomerFullName,
@@ -869,14 +870,15 @@ export function RepairDetail() {
                             <td>
                               {mat.receiptStorageKey ? (
                                 <span className="receipt-actions">
-                                  <a
-                                    href={`${api.defaults.baseURL}/repairs/${selectedRepair.id}/materials/${mat.id}/receipt`}
-                                    target="_blank"
-                                    rel="noreferrer"
+                                  <button
+                                    type="button"
+                                    className="icon-btn"
                                     title={t("materialViewReceipt")}
+                                    aria-label={t("materialViewReceipt")}
+                                    onClick={() => void viewMaterialReceipt(selectedRepair.id, mat.id)}
                                   >
                                     <Receipt size={14} />
-                                  </a>
+                                  </button>
                                   {canManageMaterials && (
                                     <button
                                       type="button"

@@ -502,6 +502,7 @@ export type AppContextValue = {
   deleteRepairMaterial: (repairId: string, materialId: string) => Promise<void>;
   uploadMaterialReceipt: (repairId: string, materialId: string, file: File) => Promise<void>;
   removeMaterialReceipt: (repairId: string, materialId: string) => Promise<void>;
+  viewMaterialReceipt: (repairId: string, materialId: string) => Promise<void>;
   loadInventoryItems: () => Promise<void>;
   saveInventoryItem: (data: Partial<InventoryItem> & { name: string }) => Promise<void>;
   deactivateInventoryItem: (id: string) => Promise<void>;
@@ -2138,6 +2139,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // The receipt endpoint needs the bearer token, so a plain <a href> to it fails with
+  // "Missing bearer token". Fetch it through the api client and show it from a blob URL.
+  async function viewMaterialReceipt(repairId: string, materialId: string): Promise<void> {
+    // Open the tab right away (still inside the click) so pop-up blockers, e.g. Safari on iOS, allow it.
+    const viewer = window.open("", "_blank");
+    try {
+      const response = await api.get(`/repairs/${repairId}/materials/${materialId}/receipt`, {
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(response.data as Blob);
+      if (viewer) {
+        viewer.location.href = url;
+      } else {
+        const link = document.createElement("a");
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+    } catch {
+      viewer?.close();
+      showToast(t("materialReceiptOpenFailed"), "error");
+    }
+  }
+
   async function removeMaterialReceipt(repairId: string, materialId: string): Promise<void> {
     try {
       await api.delete(`/repairs/${repairId}/materials/${materialId}/receipt`);
@@ -3064,6 +3093,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteRepairMaterial,
     uploadMaterialReceipt,
     removeMaterialReceipt,
+    viewMaterialReceipt,
     loadInventoryItems,
     saveInventoryItem,
     deactivateInventoryItem,
