@@ -135,6 +135,7 @@ model Repair {
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime                  @updatedAt
   completedAt         DateTime?
+  translationCache    Json?
   assignedToUser      User?                     @relation("RepairAssignedTo", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   updatedByUser       User?                     @relation("RepairUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
   customerId          String?

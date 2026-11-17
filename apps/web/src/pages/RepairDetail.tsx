@@ -608,7 +608,9 @@ export function RepairDetail() {
                     <dd>
                       {selectedRepair.itemName ?? "-"}
                       {translatedContent?.itemName && (
-                        <span className="translation-inline">EN: {translatedContent.itemName}</span>
+                        <span className="translation-inline" title={t("autoTranslatedHint")}>
+                          {translatedContent.itemName.targetLang.toUpperCase()} ({t("autoTranslated")}): {translatedContent.itemName.text}
+                        </span>
                       )}
                     </dd>
                   </div>
@@ -617,7 +619,9 @@ export function RepairDetail() {
                     <dd>
                       {renderExpandableValue("problemDescription", selectedRepair.problemDescription)}
                       {translatedContent?.problemDescription && (
-                        <span className="translation-inline">EN: {translatedContent.problemDescription}</span>
+                        <span className="translation-inline" title={t("autoTranslatedHint")}>
+                          {translatedContent.problemDescription.targetLang.toUpperCase()} ({t("autoTranslated")}): {translatedContent.problemDescription.text}
+                        </span>
                       )}
                     </dd>
                   </div>

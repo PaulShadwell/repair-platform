@@ -12,6 +12,7 @@ import { hasPermission, isAdmin } from "../services/rbac.js";
 import { generatePublicRef } from "../services/publicRef.js";
 import { resolvePhotoPath, storePhoto } from "../services/storage.js";
 import { buildLabelPayload, printPayload } from "../services/label.js";
+import { getRepairTranslations, isTranslationEnabled, warmRepairTranslations } from "../services/translation.js";
 
 const { RepairStatus, Prisma: PrismaRuntime } = prismaClientPackage;
 type RepairCreateData = prismaClientPackage.Prisma.RepairUncheckedCreateInput;
@@ -80,10 +81,6 @@ const printSchema = z.object({
   // "browser": skip server-side delivery and return the raw ESC/POS payload so
   // the web client can print directly to a USB printer via WebUSB.
   delivery: z.enum(["server", "browser"]).optional(),
-});
-
-const translationQuerySchema = z.object({
-  targetLang: z.enum(["de", "en"]).default("en"),
 });
 
 const customerHistoryQuerySchema = z.object({
@@ -179,29 +176,6 @@ function isMissingPrintAgentTableError(error: unknown): boolean {
     typeof error.message === "string" &&
     error.message.includes("PrintAgent")
   );
-}
-
-function translateGermanToEnglish(text: string | null | undefined): string {
-  if (!text) return "";
-  const dictionary: Array<[RegExp, string]> = [
-    [/\bReparatur\b/gi, "repair"],
-    [/\bdefekt\b/gi, "defective"],
-    [/\bkaputt\b/gi, "broken"],
-    [/\bKabelhülle\b/gi, "cable jacket"],
-    [/\bBatterie\b/gi, "battery"],
-    [/\bLadegerät\b/gi, "charger"],
-    [/\bStecker\b/gi, "plug"],
-    [/\bSchalter\b/gi, "switch"],
-    [/\bnicht\b/gi, "not"],
-    [/\bgeht\b/gi, "works"],
-    [/\bfunktioniert\b/gi, "works"],
-  ];
-
-  let result = text;
-  for (const [pattern, replacement] of dictionary) {
-    result = result.replace(pattern, replacement);
-  }
-  return result;
 }
 
 function canViewRepair(req: AuthenticatedRequest, assignedToUserId: string | null): boolean {
@@ -689,6 +663,7 @@ repairsRouter.post("/", async (req: AuthenticatedRequest, res) => {
     return createdRepair;
   });
 
+  warmRepairTranslations(repair.id, repair);
   res.status(201).json({ repair });
 });
 
@@ -773,12 +748,6 @@ repairsRouter.get("/by-ref/:publicRef", async (req: AuthenticatedRequest, res) =
 
 repairsRouter.get("/:id/translation", async (req: AuthenticatedRequest, res) => {
   const repairId = String(req.params.id);
-  const parsed = translationQuerySchema.safeParse(req.query);
-  if (!parsed.success) {
-    res.status(400).json({ message: "Invalid translation query" });
-    return;
-  }
-
   const repair = await prisma.repair.findUnique({
     where: { id: repairId },
     select: {
@@ -786,8 +755,6 @@ repairsRouter.get("/:id/translation", async (req: AuthenticatedRequest, res) => 
       assignedToUserId: true,
       itemName: true,
       problemDescription: true,
-      fixDescription: true,
-      technicianNotes: true,
     },
   });
 
@@ -800,31 +767,8 @@ repairsRouter.get("/:id/translation", async (req: AuthenticatedRequest, res) => 
     return;
   }
 
-  const targetLang = parsed.data.targetLang;
-  if (targetLang === "de") {
-    res.json({
-      targetLang,
-      translation: {
-        itemName: repair.itemName ?? "",
-        problemDescription: repair.problemDescription ?? "",
-        fixDescription: repair.fixDescription ?? "",
-        technicianNotes: repair.technicianNotes ?? "",
-      },
-      source: "original",
-    });
-    return;
-  }
-
-  res.json({
-    targetLang,
-    translation: {
-      itemName: translateGermanToEnglish(repair.itemName),
-      problemDescription: translateGermanToEnglish(repair.problemDescription),
-      fixDescription: translateGermanToEnglish(repair.fixDescription),
-      technicianNotes: translateGermanToEnglish(repair.technicianNotes),
-    },
-    source: "inline-dictionary",
-  });
+  const translation = await getRepairTranslations(repair.id, repair);
+  res.json({ enabled: isTranslationEnabled(), translation });
 });
 
 repairsRouter.patch("/:id", async (req: AuthenticatedRequest, res) => {
@@ -995,6 +939,13 @@ repairsRouter.patch("/:id", async (req: AuthenticatedRequest, res) => {
         nextData: patchHistory.nextData as prismaClientPackage.Prisma.InputJsonValue,
       },
     });
+  }
+
+  if (
+    updated.itemName !== existing.itemName ||
+    updated.problemDescription !== existing.problemDescription
+  ) {
+    warmRepairTranslations(updated.id, updated);
   }
 
   res.json({ repair: updated });
